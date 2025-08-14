@@ -37,17 +37,22 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 			return
 		}
 
-		// Decodificar el PEM
+		// Intentar decodificar como PEM primero. Si falla, asumir que es DER.
 		block, _ := pem.Decode(cerBytes)
-		if block == nil {
-			fmt.Println("Error: No se pudo decodificar el archivo .cer. Asegúrate de que sea un certificado PEM válido.")
-			return
+		var certBytes []byte
+		if block != nil {
+			// Es PEM
+			certBytes = block.Bytes
+		} else {
+			// No es PEM, asumir que es DER crudo
+			certBytes = cerBytes
 		}
 
-		// Parsear el certificado
-		cert, err := x509.ParseCertificate(block.Bytes)
+		// Parsear el certificado desde los bytes (PEM decodificados o DER crudos)
+		cert, err := x509.ParseCertificate(certBytes)
 		if err != nil {
 			fmt.Printf("Error al parsear el certificado: %v\n", err)
+			fmt.Println("Asegúrate de que el archivo .cer sea válido y esté en formato PEM o DER.")
 			return
 		}
 
