@@ -56,16 +56,13 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 			return
 		}
 
-		// Extraer el RFC del campo Subject
-		// El RFC se encuentra en el campo UID (OID 2.5.4.45) dentro del Subject.
-		rfcRegex := regexp.MustCompile(`OID\.2\.5\.4\.45=([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})`)
-		matches := rfcRegex.FindStringSubmatch(cert.Subject.String())
-		if len(matches) < 2 {
-			fmt.Println("Error: No se pudo encontrar el RFC en el certificado.")
+		// Extraer el RFC de forma robusta
+		rfc, err := findRfcInCertificate(cert)
+		if err != nil {
+			fmt.Println("Error: No se pudo encontrar un RFC válido en el certificado.")
 			fmt.Println("Asegúrate de que el certificado es el de la e.firma emitido por el SAT.")
 			return
 		}
-		rfc := matches[1]
 		fmt.Printf("RFC extraído del certificado: %s\n", rfc)
 
 		// Obtener el directorio HOME del usuario
@@ -104,6 +101,29 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 		fmt.Printf("RFC %s ha sido registrado correctamente.\n", rfc)
 	},
 }
+
+// findRfcInCertificate busca el RFC en varios campos comunes de un certificado de e.firma.
+func findRfcInCertificate(cert *x509.Certificate) (string, error) {
+	// Estrategia 1: Buscar en el OID específico de RFC (UniqueIdentifier)
+	oidRFC := "2.5.4.45"
+	for _, attr := range cert.Subject.Names {
+		if attr.Type.String() == oidRFC {
+			if rfc, ok := attr.Value.(string); ok {
+				return rfc, nil
+			}
+		}
+	}
+
+	// Estrategia 2: Usar regex para buscar un RFC en la cadena completa del Subject
+	rfcRegex := regexp.MustCompile(`([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})`)
+	matches := rfcRegex.FindStringSubmatch(cert.Subject.String())
+	if len(matches) > 1 {
+		return matches[1], nil
+	}
+
+	return "", fmt.Errorf("no se encontró un RFC en los campos del certificado")
+}
+
 
 func init() {
 	rootCmd.AddCommand(addRfcCmd)
