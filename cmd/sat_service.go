@@ -226,7 +226,7 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	if reqType == "emitidos" {
 		solicitud.CreateAttr("RfcEmisor", s.rfc)
 	} else {
-		solicitud.CreateAttr("RfcReceptores", s.rfc)
+		solicitud.CreateAttr("RfcReceptor", s.rfc)
 	}
 	solicitud.CreateAttr("TipoSolicitud", "CFDI")
 
