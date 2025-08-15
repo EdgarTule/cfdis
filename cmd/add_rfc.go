@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -104,22 +105,33 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 
 // findRfcInCertificate busca el RFC en varios campos comunes de un certificado de e.firma.
 func findRfcInCertificate(cert *x509.Certificate) (string, error) {
+	rfcRegex := regexp.MustCompile(`([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})`)
+
 	// Estrategia 1: Buscar en el OID específico de RFC (UniqueIdentifier)
-	oidRFC := "2.5.4.45"
+	// OID for RFC: 2.5.4.45
 	for _, attr := range cert.Subject.Names {
-		if attr.Type.String() == oidRFC {
-			if rfc, ok := attr.Value.(string); ok {
-				return rfc, nil
+		if attr.Type.String() == "2.5.4.45" {
+			if rfcValue, ok := attr.Value.(string); ok {
+				// The value can be "RFC / OTHER_RFC", so we split and take the first part.
+				parts := strings.Split(rfcValue, " / ")
+				if len(parts) > 0 && rfcRegex.MatchString(parts[0]) {
+					return parts[0], nil
+				}
 			}
 		}
 	}
 
-	// Estrategia 2: Usar regex para buscar un RFC en la cadena completa del Subject
-	rfcRegex := regexp.MustCompile(`([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})`)
+	// Estrategia 2: Buscar un RFC en el Common Name (CN)
+	if rfcRegex.MatchString(cert.Subject.CommonName) {
+		return cert.Subject.CommonName, nil
+	}
+
+	// Estrategia 3: Buscar un RFC en toda la cadena del Subject como último recurso.
 	matches := rfcRegex.FindStringSubmatch(cert.Subject.String())
 	if len(matches) > 1 {
 		return matches[1], nil
 	}
+
 
 	return "", fmt.Errorf("no se encontró un RFC en los campos del certificado")
 }
