@@ -48,28 +48,6 @@ type SoapAuthResponse struct {
 		} `xml:"AutenticaResponse"`
 	} `xml:"Body"`
 }
-type SoapVerifyResponse struct {
-	XMLName xml.Name `xml:"Envelope"`
-	Body    struct {
-		VerificaSolicitudDescargaResponse struct {
-			VerificaSolicitudDescargaResult struct {
-				CodEstatus      string `xml:"CodEstatus,attr"`
-				EstadoSolicitud string `xml:"EstadoSolicitud,attr"`
-				IdsPaquetes     struct {
-					Ids []string `xml:"IdPaquete"`
-				} `xml:"IdsPaquetes"`
-			} `xml:"VerificaSolicitudDescargaResult"`
-		} `xml:"VerificaSolicitudDescargaResponse"`
-	} `xml:"Body"`
-}
-type SoapDownloadResponse struct {
-	XMLName xml.Name `xml:"Envelope"`
-	Body    struct {
-		RespuestaDescargaMasivaTercerosSalida struct {
-			Paquete string `xml:"paquete"`
-		} `xml:"RespuestaDescargaMasivaTercerosSalida"`
-	} `xml:"Body"`
-}
 type Campo struct {
 	Nombre string
 	Tipo   string
@@ -249,12 +227,30 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	)
 	if err != nil { return "", err }
 
-	var respData SoapRequestResponse
-	if err := xml.Unmarshal(respBody, &respData); err != nil { return "", err }
+	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
+	if err != nil {
+		return "", fmt.Errorf("error al parsear XML de respuesta: %w", err)
+	}
 
-	result := respData.Body.SolicitaDescargaResponse.SolicitaDescargaResult
-	if result.CodEstatus != "5000" { return "", fmt.Errorf("error del SAT: [%s] %s", result.CodEstatus, result.Mensaje) }
-	return result.ID, nil
+	// Usar XPath para encontrar el nodo de resultado, ignorando namespaces
+	resultNode := xmlquery.FindOne(doc, "//*[local-name()='SolicitaDescargaResult']")
+	if resultNode == nil {
+		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' en la respuesta")
+	}
+
+	codEstatus := resultNode.SelectAttr("CodEstatus")
+	mensaje := resultNode.SelectAttr("Mensaje")
+
+	if codEstatus != "5000" {
+		return "", fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
+	}
+
+	idSolicitud := resultNode.SelectAttr("IdSolicitud")
+	if idSolicitud == "" {
+		return "", fmt.Errorf("el IdSolicitud vino vacío en una respuesta exitosa")
+	}
+
+	return idSolicitud, nil
 }
 
 func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
@@ -270,12 +266,34 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 	)
 	if err != nil { return 0, nil, err }
 
-	var respData SoapVerifyResponse
-	if err := xml.Unmarshal(respBody, &respData); err != nil { return 0, nil, err }
+	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
+	if err != nil {
+		return 0, nil, fmt.Errorf("error al parsear XML de respuesta: %w", err)
+	}
 
-	result := respData.Body.VerificaSolicitudDescargaResponse.VerificaSolicitudDescargaResult
-	status, _ := strconv.Atoi(result.EstadoSolicitud)
-	return status, result.IdsPaquetes.Ids, nil
+	resultNode := xmlquery.FindOne(doc, "//*[local-name()='VerificaSolicitudDescargaResult']")
+	if resultNode == nil {
+		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' en la respuesta")
+	}
+
+	codEstatus := resultNode.SelectAttr("CodEstatus")
+	if codEstatus != "5000" {
+		mensaje := resultNode.SelectAttr("Mensaje")
+		return 0, nil, fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
+	}
+
+	estadoSolicitud := resultNode.SelectAttr("EstadoSolicitud")
+	status, _ := strconv.Atoi(estadoSolicitud)
+
+	var downloadIDs []string
+	idPaquetesNode := xmlquery.FindOne(resultNode, "//*[local-name()='IdsPaquetes']")
+	if idPaquetesNode != nil {
+		for _, n := range idPaquetesNode.SelectElements("*") {
+			downloadIDs = append(downloadIDs, n.InnerText())
+		}
+	}
+
+	return status, downloadIDs, nil
 }
 
 func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
@@ -291,11 +309,20 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 	)
 	if err != nil { return err }
 
-	var respData SoapDownloadResponse
-	if err := xml.Unmarshal(respBody, &respData); err != nil { return err }
+	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
+	if err != nil {
+		return fmt.Errorf("error al parsear XML de respuesta: %w", err)
+	}
 
-	zipData, err := base64.StdEncoding.DecodeString(respData.Body.RespuestaDescargaMasivaTercerosSalida.Paquete)
-	if err != nil { return err }
+	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='paquete']")
+	if paqueteNode == nil {
+		return fmt.Errorf("no se encontró el nodo 'paquete' en la respuesta")
+	}
+
+	zipData, err := base64.StdEncoding.DecodeString(paqueteNode.InnerText())
+	if err != nil {
+		return fmt.Errorf("decodificar paquete: %w", err)
+	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil { return err }
