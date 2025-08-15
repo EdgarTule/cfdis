@@ -261,9 +261,9 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return "", fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-	resultNode := xmlquery.FindOne(doc, "//*[local-name()='SolicitaDescargaResult']")
+	resultNode := xmlquery.FindOne(doc, "//*[@CodEstatus and @IdSolicitud]")
 	if resultNode == nil {
-		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
+		return "", fmt.Errorf("no se encontró un nodo de resultado con CodEstatus y IdSolicitud ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 	codEstatus := resultNode.SelectAttr("CodEstatus")
 	mensaje := resultNode.SelectAttr("Mensaje")
@@ -305,9 +305,9 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return 0, nil, fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-	resultNode := xmlquery.FindOne(doc, "//*[local-name()='VerificaSolicitudDescargaResult']")
+	resultNode := xmlquery.FindOne(doc, "//*[@CodEstatus and @EstadoSolicitud]")
 	if resultNode == nil {
-		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
+		return 0, nil, fmt.Errorf("no se encontró un nodo de resultado válido ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 	codEstatus := resultNode.SelectAttr("CodEstatus")
 	if codEstatus != "5000" {
@@ -354,9 +354,9 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='paquete']")
+	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='Paquete']")
 	if paqueteNode == nil {
-		return fmt.Errorf("no se encontró el nodo 'paquete' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
+		return fmt.Errorf("no se encontró el nodo 'Paquete' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 	zipData, err := base64.StdEncoding.DecodeString(paqueteNode.InnerText())
 	if err != nil {
