@@ -156,26 +156,8 @@ func (s *SatService) authenticate() error {
 }
 
 
-// --- Generic Signing and Request Logic ---
-func (s *SatService) signAndSend(soapAction, url string, body *etree.Element) ([]byte, error) {
-	envelope := etree.NewElement("s:Envelope")
-	envelope.CreateAttr("xmlns:s", "http://schemas.xmlsoap.org/soap/envelope/")
-	envelope.CreateAttr("xmlns:des", "http://DescargaMasivaTerceros.sat.gob.mx")
-	envelope.CreateAttr("xmlns:xd", "http://www.w3.org/2000/09/xmldsig#")
-	envelope.CreateElement("s:Header")
-	bodyContainer := envelope.CreateElement("s:Body")
-	bodyContainer.AddChild(body)
-
-	ctx := dsig.NewDefaultSigningContext(&MemoryKeyStore{key: s.key, cert: s.cert})
-
-	signedNode, err := ctx.SignEnveloped(body)
-	if err != nil {
-		return nil, fmt.Errorf("error al firmar el elemento: %w", err)
-	}
-
-	bodyContainer.RemoveChildAt(0)
-	bodyContainer.AddChild(signedNode)
-
+// --- Generic Sending Logic ---
+func (s *SatService) sendSoapRequest(soapAction, url string, envelope *etree.Element) ([]byte, error) {
 	doc := etree.NewDocument()
 	doc.SetRoot(envelope)
 	requestBody, err := doc.WriteToString()
@@ -200,20 +182,42 @@ func (s *SatService) signAndSend(soapAction, url string, body *etree.Element) ([
 	return respBody, nil
 }
 
-// --- Service Methods ---
-func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, error) {
-	var body *etree.Element
-	var soapAction string
+// buildSoapEnvelope crea el sobre SOAP y firma el nodo especificado.
+func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (*etree.Element, error) {
+	envelope := etree.NewElement("s:Envelope")
+	envelope.CreateAttr("xmlns:s", "http://schemas.xmlsoap.org/soap/envelope/")
+	envelope.CreateAttr("xmlns:des", "http://DescargaMasivaTerceros.sat.gob.mx")
+	envelope.CreateAttr("xmlns:xd", "http://www.w3.org/2000/09/xmldsig#")
+	envelope.CreateElement("s:Header")
+	bodyContainer := envelope.CreateElement("s:Body")
+	bodyContainer.AddChild(bodyContent)
 
-	if reqType == "emitidos" {
-		body = etree.NewElement("des:SolicitaDescargaEmitidos")
-		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaEmitidos"
-	} else {
-		body = etree.NewElement("des:SolicitaDescargaRecibidos")
-		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"
+	// Firmar el nodo correcto
+	ctx := dsig.NewDefaultSigningContext(&MemoryKeyStore{key: s.key, cert: s.cert})
+	signedNode, err := ctx.SignEnveloped(nodeToSign)
+	if err != nil {
+		return nil, fmt.Errorf("error al firmar el elemento: %w", err)
 	}
 
-	solicitud := body.CreateElement("des:solicitud")
+	// Reemplazar el nodo original con el firmado
+	parent := nodeToSign.Parent()
+	parent.RemoveChild(nodeToSign)
+	parent.AddChild(signedNode)
+
+	return envelope, nil
+}
+
+
+// --- Service Methods ---
+func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, error) {
+	// 1. Construir la estructura XML completa
+	var body *etree.Element
+	if reqType == "emitidos" {
+		body = etree.NewElement("des:SolicitaDescargaEmitidos")
+	} else {
+		body = etree.NewElement("des:SolicitaDescargaRecibidos")
+	}
+	solicitud := body.CreateElement("des:solicitud") // Este es el nodo que se firmará
 	solicitud.CreateAttr("FechaInicial", startDate)
 	solicitud.CreateAttr("FechaFinal", endDate)
 	if reqType == "emitidos" {
@@ -223,44 +227,50 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	}
 	solicitud.CreateAttr("TipoSolicitud", "CFDI")
 
-	respBody, err := s.signAndSend(
+	// 2. Firmar el nodo <solicitud> y construir el sobre
+	envelope, err := s.buildSoapEnvelope(body, solicitud)
+	if err != nil {
+		return "", err
+	}
+
+	// 3. Enviar la petición
+	var soapAction string
+	if reqType == "emitidos" {
+		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaEmitidos"
+	} else {
+		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"
+	}
+	respBody, err := s.sendSoapRequest(
 		soapAction,
 		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/SolicitaDescargaService.svc",
-		solicitud, // Sign the <solicitud> node
+		envelope,
 	)
 	if err != nil { return "", err }
 
+	// 4. Parsear la respuesta
 	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
 	if err != nil {
 		return "", fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
-
-	// Primero, buscar un SOAP Fault
 	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
 	if faultNode != nil {
 		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return "", fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-
-	// Si no hay Fault, buscar el resultado exitoso
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='SolicitaDescargaResult']")
 	if resultNode == nil {
 		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
-
 	codEstatus := resultNode.SelectAttr("CodEstatus")
 	mensaje := resultNode.SelectAttr("Mensaje")
-
 	if codEstatus != "5000" {
 		return "", fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
 	}
-
 	idSolicitud := resultNode.SelectAttr("IdSolicitud")
 	if idSolicitud == "" {
 		return "", fmt.Errorf("el IdSolicitud vino vacío en una respuesta exitosa")
 	}
-
 	return idSolicitud, nil
 }
 
@@ -270,10 +280,15 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 	solicitud.CreateAttr("IdSolicitud", requestID)
 	solicitud.CreateAttr("RfcSolicitante", s.rfc)
 
-	respBody, err := s.signAndSend(
+	envelope, err := s.buildSoapEnvelope(body, solicitud)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	respBody, err := s.sendSoapRequest(
 		"http://DescargaMasivaTerceros.sat.gob.mx/IVerificaSolicitudDescargaService/VerificaSolicitudDescarga",
 		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/VerificaSolicitudDescargaService.svc",
-		body,
+		envelope,
 	)
 	if err != nil { return 0, nil, err }
 
@@ -281,28 +296,23 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 	if err != nil {
 		return 0, nil, fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
-
 	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
 	if faultNode != nil {
 		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return 0, nil, fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='VerificaSolicitudDescargaResult']")
 	if resultNode == nil {
 		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
-
 	codEstatus := resultNode.SelectAttr("CodEstatus")
 	if codEstatus != "5000" {
 		mensaje := resultNode.SelectAttr("Mensaje")
 		return 0, nil, fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
 	}
-
 	estadoSolicitud := resultNode.SelectAttr("EstadoSolicitud")
 	status, _ := strconv.Atoi(estadoSolicitud)
-
 	var downloadIDs []string
 	idPaquetesNode := xmlquery.FindOne(resultNode, "//*[local-name()='IdsPaquetes']")
 	if idPaquetesNode != nil {
@@ -310,7 +320,6 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 			downloadIDs = append(downloadIDs, n.InnerText())
 		}
 	}
-
 	return status, downloadIDs, nil
 }
 
@@ -320,10 +329,15 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 	peticion.CreateAttr("IdPaquete", packageID)
 	peticion.CreateAttr("RfcSolicitante", s.rfc)
 
-	respBody, err := s.signAndSend(
+	envelope, err := s.buildSoapEnvelope(body, peticion)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := s.sendSoapRequest(
 		"http://DescargaMasivaTerceros.sat.gob.mx/IDescargaMasivaTercerosService/Descargar",
 		"https://cfdidescargamasiva.clouda.sat.gob.mx/DescargaMasivaService.svc",
-		body,
+		envelope,
 	)
 	if err != nil { return err }
 
@@ -331,19 +345,16 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 	if err != nil {
 		return fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
-
 	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
 	if faultNode != nil {
 		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
 		return fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
-
 	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='paquete']")
 	if paqueteNode == nil {
 		return fmt.Errorf("no se encontró el nodo 'paquete' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
-
 	zipData, err := base64.StdEncoding.DecodeString(paqueteNode.InnerText())
 	if err != nil {
 		return fmt.Errorf("decodificar paquete: %w", err)
