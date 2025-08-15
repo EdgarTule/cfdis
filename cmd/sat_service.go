@@ -243,7 +243,7 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	// Si no hay Fault, buscar el resultado exitoso
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='SolicitaDescargaResult']")
 	if resultNode == nil {
-		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' ni 'Fault' en la respuesta")
+		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 
 	codEstatus := resultNode.SelectAttr("CodEstatus")
@@ -288,7 +288,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='VerificaSolicitudDescargaResult']")
 	if resultNode == nil {
-		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' ni 'Fault' en la respuesta")
+		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 
 	codEstatus := resultNode.SelectAttr("CodEstatus")
@@ -338,7 +338,7 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 
 	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='paquete']")
 	if paqueteNode == nil {
-		return fmt.Errorf("no se encontró el nodo 'paquete' ni 'Fault' en la respuesta")
+		return fmt.Errorf("no se encontró el nodo 'paquete' ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 
 	zipData, err := base64.StdEncoding.DecodeString(paqueteNode.InnerText())
