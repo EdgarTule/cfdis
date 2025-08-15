@@ -235,8 +235,15 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	}
 	solicitud.CreateAttr("TipoSolicitud", "CFDI")
 
+	var soapAction string
+	if reqType == "emitidos" {
+		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaEmitidos"
+	} else {
+		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"
+	}
+
 	respBody, err := s.signAndSend(
-		"http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescarga",
+		soapAction,
 		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/SolicitaDescargaService.svc",
 		body,
 	)
