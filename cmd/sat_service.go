@@ -149,8 +149,11 @@ func (s *SatService) authenticate() error {
 	var authResponse SoapAuthResponse
 	if err := xml.Unmarshal(respBody, &authResponse); err != nil { return fmt.Errorf("parsear respuesta: %w\nRespuesta: %s", err, string(respBody)) }
 	if authResponse.Body.AutenticaResponse.AutenticaResult == "" { return fmt.Errorf("token vacío en respuesta: %s", string(respBody)) }
-	s.token = fmt.Sprintf("Authorization: WRAP access_token=\"%s\"", authResponse.Body.AutenticaResponse.AutenticaResult)
+
+	// Guardar solo el valor del token, no toda la cabecera.
+	s.token = fmt.Sprintf("WRAP access_token=\"%s\"", authResponse.Body.AutenticaResponse.AutenticaResult)
 	if err := ioutil.WriteFile(s.tokenPath, []byte(s.token), 0644); err != nil { return fmt.Errorf("guardar token: %w", err) }
+
 	fmt.Println("Autenticación exitosa. Token guardado.")
 	return nil
 }
