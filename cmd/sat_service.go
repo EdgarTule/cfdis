@@ -232,10 +232,18 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 		return "", fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
 
-	// Usar XPath para encontrar el nodo de resultado, ignorando namespaces
+	// Primero, buscar un SOAP Fault
+	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
+	if faultNode != nil {
+		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
+		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
+		return "", fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
+	}
+
+	// Si no hay Fault, buscar el resultado exitoso
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='SolicitaDescargaResult']")
 	if resultNode == nil {
-		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' en la respuesta")
+		return "", fmt.Errorf("no se encontró el nodo 'SolicitaDescargaResult' ni 'Fault' en la respuesta")
 	}
 
 	codEstatus := resultNode.SelectAttr("CodEstatus")
@@ -271,9 +279,16 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 		return 0, nil, fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
 
+	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
+	if faultNode != nil {
+		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
+		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
+		return 0, nil, fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
+	}
+
 	resultNode := xmlquery.FindOne(doc, "//*[local-name()='VerificaSolicitudDescargaResult']")
 	if resultNode == nil {
-		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' en la respuesta")
+		return 0, nil, fmt.Errorf("no se encontró el nodo 'VerificaSolicitudDescargaResult' ni 'Fault' en la respuesta")
 	}
 
 	codEstatus := resultNode.SelectAttr("CodEstatus")
@@ -314,9 +329,16 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 		return fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
 
+	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
+	if faultNode != nil {
+		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
+		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
+		return fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
+	}
+
 	paqueteNode := xmlquery.FindOne(doc, "//*[local-name()='paquete']")
 	if paqueteNode == nil {
-		return fmt.Errorf("no se encontró el nodo 'paquete' en la respuesta")
+		return fmt.Errorf("no se encontró el nodo 'paquete' ni 'Fault' en la respuesta")
 	}
 
 	zipData, err := base64.StdEncoding.DecodeString(paqueteNode.InnerText())
