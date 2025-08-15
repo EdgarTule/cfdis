@@ -229,6 +229,7 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 		solicitud.CreateAttr("RfcReceptor", s.rfc)
 	}
 	solicitud.CreateAttr("TipoSolicitud", "CFDI")
+	solicitud.CreateAttr("EstadoComprobante", "Vigente") // 1: Vigente, 2: Cancelado, 0: Ambos
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
