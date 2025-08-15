@@ -106,9 +106,16 @@ func NewSatService(rfc string, keyPath string, cerPath string, password []byte) 
 		rsaPrivateKey, ok = privateKey.(*rsa.PrivateKey)
 		if !ok { return nil, fmt.Errorf("la llave no es de tipo RSA") }
 
+		// Handle both PEM and DER certificate formats
+		var certBytes []byte
 		pemBlock, _ := pem.Decode(cerBytes)
-		cert, err = x509.ParseCertificate(pemBlock.Bytes)
-		if err != nil { return nil, err }
+		if pemBlock != nil {
+			certBytes = pemBlock.Bytes
+		} else {
+			certBytes = cerBytes // Assume DER
+		}
+		cert, err = x509.ParseCertificate(certBytes)
+		if err != nil { return nil, fmt.Errorf("parsear certificado: %w", err) }
 	}
 
 	return &SatService{
