@@ -95,9 +95,6 @@ var verifyCmd = &cobra.Command{
 func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string) bool {
 	fmt.Printf("  > Estado: %s (%d)\n", statusToString(status), status)
 
-	// Si la solicitud ya no está en un estado pendiente o en proceso, no necesitamos seguir verificándola.
-	isTerminalState := status >= 4 // Error, Rechazada, Vencida
-
 	// Si la solicitud está Terminada (3), se considera manejada, independientemente de si tiene paquetes o no.
 	if status == 3 {
 		if len(downloadIDs) > 0 {
