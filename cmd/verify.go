@@ -98,30 +98,35 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 	// Si la solicitud ya no está en un estado pendiente o en proceso, no necesitamos seguir verificándola.
 	isTerminalState := status >= 4 // Error, Rechazada, Vencida
 
-	// Si el estado es "Terminada" y hemos recibido los IDs de los paquetes, la damos por completada.
-	if status == 3 && len(downloadIDs) > 0 {
-		fmt.Printf("  > ¡Éxito! IDs de descarga recibidos: %v\n", downloadIDs)
-		idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
-		f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Printf("  > Error al abrir archivo de descargas: %v\n", err)
-			return false // No se pudo guardar, reintentar en el futuro.
-		}
-		defer f.Close()
-		for _, id := range downloadIDs {
-			if _, err := f.WriteString(id + "\n"); err != nil {
-				fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
+	// Si la solicitud está Terminada (3), se considera manejada, independientemente de si tiene paquetes o no.
+	if status == 3 {
+		if len(downloadIDs) > 0 {
+			fmt.Printf("  > ¡Éxito! IDs de descarga recibidos: %v\n", downloadIDs)
+			idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
+			f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				fmt.Printf("  > Error al abrir archivo de descargas: %v\n", err)
+				return false // No se pudo guardar, reintentar en el futuro.
 			}
+			defer f.Close()
+			for _, id := range downloadIDs {
+				if _, err := f.WriteString(id + "\n"); err != nil {
+					fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
+				}
+			}
+		} else {
+			fmt.Println("  > La solicitud ha terminado pero no generó paquetes de descarga (posiblemente no se encontraron CFDI).")
 		}
-		return true // La solicitud se completó y se manejó.
+		return true // La solicitud se completó y se manejó, con o sin paquetes.
 	}
 
-	if isTerminalState {
+	// Si la solicitud ya no está en un estado pendiente o en proceso (Error, Rechazada, Vencida), también se considera manejada.
+	if status >= 4 {
 		fmt.Printf("  > La solicitud ha finalizado con un estado de error/terminal y será eliminada de la lista de pendientes.\n")
 		return true
 	}
 
-	// Si el estado es 3 pero aún no hay paquetes, o si está en 1 o 2, sigue pendiente.
+	// Si el estado es 1 (Aceptada) o 2 (En proceso), sigue pendiente.
 	return false
 }
 
