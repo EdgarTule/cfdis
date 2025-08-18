@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	reqRfc     string
-	reqType    string
-	reqStart   string
-	reqEnd     string
+	reqRfc       string
+	reqTipo      string
+	reqSubTipo   string
+	reqStart     string
+	reqEnd       string
 )
 
 const (
@@ -46,12 +47,17 @@ type SoapRequestResponse struct {
 
 var requestCmd = &cobra.Command{
 	Use:   "request",
-	Short: "Envía una solicitud de descarga de CFDI (emitidos o recibidos).",
+	Short: "Envía una solicitud de descarga de CFDI o Retenciones.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// --- Validar entradas ---
-		reqType = strings.ToLower(reqType)
-		if reqType != "emitidos" && reqType != "recibidos" {
-			fmt.Println("Error: el tipo de solicitud debe ser 'emitidos' o 'recibidos'.")
+		reqTipo = strings.ToLower(reqTipo)
+		if reqTipo != "cfdi" && reqTipo != "retenciones" {
+			fmt.Println("Error: el tipo de solicitud debe ser 'cfdi' o 'retenciones'.")
+			return
+		}
+		reqSubTipo = strings.ToLower(reqSubTipo)
+		if reqSubTipo != "emitidos" && reqSubTipo != "recibidos" {
+			fmt.Println("Error: el sub-tipo de solicitud debe ser 'emitidos' o 'recibidos'.")
 			return
 		}
 		// TODO: Validar formato de fecha
@@ -83,7 +89,7 @@ var requestCmd = &cobra.Command{
 		}
 
 		// --- Firmar y enviar solicitud ---
-		id, err := service.SendRequest(reqType, reqStart, reqEnd)
+		id, err := service.SendRequest(reqTipo, reqSubTipo, reqStart, reqEnd)
 		if err != nil {
 			fmt.Printf("Error al enviar la solicitud: %v\n", err)
 			return
@@ -108,11 +114,12 @@ var requestCmd = &cobra.Command{
 
 func init() {
 	requestCmd.Flags().StringVar(&reqRfc, "rfc", "", "RFC del contribuyente")
-	requestCmd.Flags().StringVar(&reqType, "type", "", "Tipo de solicitud: 'emitidos' o 'recibidos'")
+	requestCmd.Flags().StringVar(&reqTipo, "solicitud", "cfdi", "Tipo de solicitud: 'cfdi' o 'retenciones'")
+	requestCmd.Flags().StringVar(&reqSubTipo, "tipo", "", "Tipo de comprobante: 'emitidos' o 'recibidos'")
 	requestCmd.Flags().StringVar(&reqStart, "start", "", "Fecha de inicio (YYYY-MM-DDTHH:MM:SS)")
 	requestCmd.Flags().StringVar(&reqEnd, "end", "", "Fecha de fin (YYYY-MM-DDTHH:MM:SS)")
 	requestCmd.MarkFlagRequired("rfc")
-	requestCmd.MarkFlagRequired("type")
+	requestCmd.MarkFlagRequired("tipo")
 	requestCmd.MarkFlagRequired("start")
 	requestCmd.MarkFlagRequired("end")
 

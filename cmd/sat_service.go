@@ -212,10 +212,10 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 
 
 // --- Service Methods ---
-func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, error) {
+func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string) (string, error) {
 	// 1. Construir la estructura XML completa
 	var body *etree.Element
-	if reqType == "emitidos" {
+	if reqSubTipo == "emitidos" {
 		body = etree.NewElement("des:SolicitaDescargaEmitidos")
 	} else {
 		body = etree.NewElement("des:SolicitaDescargaRecibidos")
@@ -223,12 +223,17 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 	solicitud := body.CreateElement("des:solicitud") // Este es el nodo que se firmará
 	solicitud.CreateAttr("FechaInicial", startDate)
 	solicitud.CreateAttr("FechaFinal", endDate)
-	if reqType == "emitidos" {
+	if reqSubTipo == "emitidos" {
 		solicitud.CreateAttr("RfcEmisor", s.rfc)
 	} else {
 		solicitud.CreateAttr("RfcReceptor", s.rfc)
 	}
-	solicitud.CreateAttr("TipoSolicitud", "CFDI")
+
+	if reqTipo == "retenciones" {
+		solicitud.CreateAttr("TipoSolicitud", "Retencion")
+	} else {
+		solicitud.CreateAttr("TipoSolicitud", "CFDI")
+	}
 	solicitud.CreateAttr("EstadoComprobante", "Vigente")
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
@@ -239,7 +244,7 @@ func (s *SatService) SendRequest(reqType, startDate, endDate string) (string, er
 
 	// 3. Enviar la petición
 	var soapAction string
-	if reqType == "emitidos" {
+	if reqSubTipo == "emitidos" {
 		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaEmitidos"
 	} else {
 		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"

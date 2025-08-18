@@ -41,14 +41,17 @@ Puedes forzar una nueva autenticación para verificar que tus credenciales son c
 
 ### 3. Solicitar una Descarga
 
-Envía una solicitud para descargar los CFDI emitidos o recibidos en un rango de fechas.
+Envía una solicitud para descargar CFDI o Retenciones, ya sean emitidos o recibidos, en un rango de fechas.
+
+- `--solicitud`: Especifica el tipo de documento. Puede ser `cfdi` (por defecto) o `retenciones`.
+- `--tipo`: Especifica si son `emitidos` o `recibidos`.
 
 ```bash
 # Solicitar CFDI Emitidos
-./sat request --rfc TU_RFC_AQUI --type emitidos --start "2023-01-01T00:00:00" --end "2023-01-31T23:59:59"
+./sat request --rfc TU_RFC_AQUI --tipo emitidos --start "2023-01-01T00:00:00" --end "2023-01-31T23:59:59"
 
-# Solicitar CFDI Recibidos
-./sat request --rfc TU_RFC_AQUI --type recibidos --start "2023-01-01T00:00:00" --end "2023-01-31T23:59:59"
+# Solicitar Retenciones Recibidas
+./sat request --rfc TU_RFC_AQUI --solicitud retenciones --tipo recibidos --start "2023-01-01T00:00:00" --end "2023-01-31T23:59:59"
 ```
 El ID de la solicitud se guardará en `~/.sat/<RFC>/solicitudes.txt`.
 
