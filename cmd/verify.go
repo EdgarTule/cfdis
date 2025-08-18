@@ -94,9 +94,13 @@ var verifyCmd = &cobra.Command{
 // handleVerificationResult procesa el resultado y devuelve true si la solicitud se completó (y debe ser eliminada de la lista de pendientes).
 func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string) bool {
 	fmt.Printf("  > Estado: %s (%d)\n", statusToString(status), status)
-	if status == 3 { // Terminada
-		fmt.Printf("  > Solicitud completada. IDs de descarga: %v\n", downloadIDs)
-		// Guardar IDs de descarga
+
+	// Si la solicitud ya no está en un estado pendiente o en proceso, no necesitamos seguir verificándola.
+	isTerminalState := status >= 4 // Error, Rechazada, Vencida
+
+	// Si el estado es "Terminada" y hemos recibido los IDs de los paquetes, la damos por completada.
+	if status == 3 && len(downloadIDs) > 0 {
+		fmt.Printf("  > ¡Éxito! IDs de descarga recibidos: %v\n", downloadIDs)
 		idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
 		f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -110,11 +114,15 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 			}
 		}
 		return true // La solicitud se completó y se manejó.
-	} else if status >= 4 { // Error, Rechazada, Vencida
-		fmt.Printf("  > La solicitud ha finalizado con un estado de error/terminal.\n")
-		return true // La solicitud ya no está pendiente.
 	}
-	return false // Sigue pendiente.
+
+	if isTerminalState {
+		fmt.Printf("  > La solicitud ha finalizado con un estado de error/terminal y será eliminada de la lista de pendientes.\n")
+		return true
+	}
+
+	// Si el estado es 3 pero aún no hay paquetes, o si está en 1 o 2, sigue pendiente.
+	return false
 }
 
 func statusToString(status int) string {
