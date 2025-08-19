@@ -395,8 +395,7 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		defaultCampos := `uuid CHAR(50) string(//*[local-name()='TimbreFiscalDigital']/@UUID)
-emisor_rfc CHAR(13) string(//*[local-name()='Emisor']/@Rfc)
+		defaultCampos := `emisor_rfc CHAR(13) string(//*[local-name()='Emisor']/@Rfc)
 receptor_rfc CHAR(13) string(//*[local-name()='Receptor']/@Rfc)
 fecha DATETIME string(//@Fecha)
 total DECIMAL(18,2) string(//@Total)`
