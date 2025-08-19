@@ -484,10 +484,7 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 		return err
 	}
 
-	cleanedXML := strings.NewReader(
-		strings.ReplaceAll(string(xmlBytes), "cfdi:", ""),
-	)
-	doc, err := xmlquery.Parse(cleanedXML)
+	doc, err := xmlquery.Parse(strings.NewReader(string(xmlBytes)))
 	if err != nil {
 		return fmt.Errorf("parsear xml: %w", err)
 	}
