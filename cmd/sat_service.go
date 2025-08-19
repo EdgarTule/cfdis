@@ -395,6 +395,7 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
+		// Se definen los XPaths correctos para CFDI 4.0, usando los prefijos de namespace.
 		defaultCampos := `emisor_rfc CHAR(13) string(//cfdi:Emisor/@Rfc)
 receptor_rfc CHAR(13) string(//cfdi:Receptor/@Rfc)
 fecha DATETIME string(//cfdi:Comprobante/@Fecha)
