@@ -395,11 +395,11 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		// Se definen los XPaths correctos para CFDI 4.0, usando los prefijos de namespace.
-		defaultCampos := `emisor_rfc CHAR(13) string(//cfdi:Emisor/@Rfc)
-receptor_rfc CHAR(13) string(//cfdi:Receptor/@Rfc)
-fecha DATETIME string(//cfdi:Comprobante/@Fecha)
-total DECIMAL(18,2) string(//cfdi:Comprobante/@Total)`
+		// Usar local-name() para ignorar los prefijos de namespace y hacer la búsqueda más robusta.
+		defaultCampos := `emisor_rfc CHAR(13) string(//*[local-name()='Emisor']/@Rfc)
+receptor_rfc CHAR(13) string(//*[local-name()='Receptor']/@Rfc)
+fecha DATETIME string(//*[local-name()='Comprobante']/@Fecha)
+total DECIMAL(18,2) string(//*[local-name()='Comprobante']/@Total)`
 		if err := ioutil.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos por defecto: %w", err)
 		}
@@ -491,7 +491,7 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 	}
 
 	// UUID se maneja por separado ya que es la clave principal.
-	uuidNode := xmlquery.FindOne(doc, "//cfdi:Complemento/tfd:TimbreFiscalDigital/@UUID")
+	uuidNode := xmlquery.FindOne(doc, "//*[local-name()='TimbreFiscalDigital']/@UUID")
 	if uuidNode == nil {
 		return fmt.Errorf("no se encontró el UUID en el XML")
 	}
