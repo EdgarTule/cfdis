@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"encoding/json"
 
@@ -95,26 +96,20 @@ var verifyCmd = &cobra.Command{
 func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string) bool {
 	fmt.Printf("  > Estado: %s (%d)\n", statusToString(status), status)
 
-	// Si la solicitud está Terminada (3), se considera manejada, independientemente de si tiene paquetes o no.
+	// Si la solicitud está Terminada (3), se considera manejada.
 	if status == 3 {
+		// Si el SAT devuelve explícitamente los IDs de paquetes, los usamos.
 		if len(downloadIDs) > 0 {
-			fmt.Printf("  > ¡Éxito! IDs de descarga recibidos: %v\n", downloadIDs)
-			idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
-			f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				fmt.Printf("  > Error al abrir archivo de descargas: %v\n", err)
-				return false // No se pudo guardar, reintentar en el futuro.
-			}
-			defer f.Close()
-			for _, id := range downloadIDs {
-				if _, err := f.WriteString(id + "\n"); err != nil {
-					fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
-				}
-			}
+			fmt.Printf("  > ¡Éxito! IDs de descarga recibidos explícitamente: %v\n", downloadIDs)
+			saveDownloadIDs(s, downloadIDs)
 		} else {
-			fmt.Println("  > La solicitud ha terminado pero no generó paquetes de descarga (posiblemente no se encontraron CFDI).")
+			// Si no, aplicamos el truco descubierto: usar el ID de la solicitud con sufijo.
+			fmt.Println("  > Solicitud terminada sin IDs de paquete explícitos. Intentando generar ID de descarga alternativo.")
+			alternativeID := strings.ToUpper(requestID) + "_01"
+			fmt.Printf("  > ID de descarga generado: %s\n", alternativeID)
+			saveDownloadIDs(s, []string{alternativeID})
 		}
-		return true // La solicitud se completó y se manejó, con o sin paquetes.
+		return true // La solicitud se completó y se manejó.
 	}
 
 	// Si la solicitud ya no está en un estado pendiente o en proceso (Error, Rechazada, Vencida), también se considera manejada.
@@ -125,6 +120,22 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 
 	// Si el estado es 1 (Aceptada) o 2 (En proceso), sigue pendiente.
 	return false
+}
+
+// saveDownloadIDs guarda una lista de IDs en el archivo idsdescarga.txt
+func saveDownloadIDs(s *SatService, ids []string) {
+	idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
+	f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("  > Error al abrir archivo de descargas: %v\n", err)
+		return
+	}
+	defer f.Close()
+	for _, id := range ids {
+		if _, err := f.WriteString(id + "\n"); err != nil {
+			fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
+		}
+	}
 }
 
 func statusToString(status int) string {
