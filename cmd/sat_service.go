@@ -25,9 +25,9 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/beevik/etree"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/russellhaering/goxmldsig"
 	"github.com/youmark/pkcs8"
+	_ "modernc.org/sqlite"
 )
 
 // Custom KeyStore for goxmldsig
