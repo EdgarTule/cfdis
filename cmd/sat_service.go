@@ -396,10 +396,10 @@ func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
 		// Usar local-name() para ignorar los prefijos de namespace y hacer la búsqueda más robusta.
-		defaultCampos := `emisor_rfc CHAR(13) string(//*[local-name()='Emisor']/@Rfc)
-receptor_rfc CHAR(13) string(//*[local-name()='Receptor']/@Rfc)
-fecha DATETIME string(//*[local-name()='Comprobante']/@Fecha)
-total DECIMAL(18,2) string(//*[local-name()='Comprobante']/@Total)`
+		defaultCampos := `emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
+receptor_rfc CHAR(13) //*[local-name()='Receptor']/@Rfc
+fecha DATETIME //*[local-name()='Comprobante']/@Fecha
+total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
 		if err := ioutil.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos por defecto: %w", err)
 		}
@@ -510,20 +510,14 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 	values := make([]interface{}, len(campos)+2)
 	values[0] = uuid
 	values[1] = xmlPath
-	fmt.Println("--- INICIO DEPURACIÓN XML ---")
 	for i, campo := range campos {
-		fmt.Printf("Buscando campo '%s' con XPath: %s\n", campo.Nombre, campo.XPath)
 		node := xmlquery.FindOne(doc, campo.XPath)
 		if node != nil {
-			valor := node.InnerText()
-			values[i+2] = valor
-			fmt.Printf("  > Encontrado. Valor: %s\n", valor)
+			values[i+2] = node.InnerText()
 		} else {
 			values[i+2] = nil
-			fmt.Println("  > NO Encontrado.")
 		}
 	}
-	fmt.Println("--- FIN DEPURACIÓN XML ---")
 
 	var cols, placeholders strings.Builder
 	cols.WriteString("uuid, xml_path")
