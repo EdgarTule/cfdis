@@ -510,14 +510,20 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 	values := make([]interface{}, len(campos)+2)
 	values[0] = uuid
 	values[1] = xmlPath
+	fmt.Println("--- INICIO DEPURACIÓN XML ---")
 	for i, campo := range campos {
+		fmt.Printf("Buscando campo '%s' con XPath: %s\n", campo.Nombre, campo.XPath)
 		node := xmlquery.FindOne(doc, campo.XPath)
 		if node != nil {
-			values[i+2] = node.InnerText()
+			valor := node.InnerText()
+			values[i+2] = valor
+			fmt.Printf("  > Encontrado. Valor: %s\n", valor)
 		} else {
 			values[i+2] = nil
+			fmt.Println("  > NO Encontrado.")
 		}
 	}
+	fmt.Println("--- FIN DEPURACIÓN XML ---")
 
 	var cols, placeholders strings.Builder
 	cols.WriteString("uuid, xml_path")
