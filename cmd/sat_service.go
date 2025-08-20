@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"crypto/md5"
+	"encoding/hex"
 	"github.com/antchfx/xmlquery"
 	"github.com/beevik/etree"
 	"github.com/russellhaering/goxmldsig"
@@ -394,8 +396,11 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 
 func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
+	dbPath := filepath.Join(s.rfcDir, "sat.db")
+	hashFile := filepath.Join(s.rfcDir, "campos.md5")
+
+	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		// Usar local-name() para ignorar los prefijos de namespace y hacer la búsqueda más robusta.
 		defaultCampos := `emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
 receptor_rfc CHAR(13) //*[local-name()='Receptor']/@Rfc
 fecha DATETIME //*[local-name()='Comprobante']/@Fecha
@@ -406,12 +411,28 @@ total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
 		fmt.Printf("Archivo 'campos' no encontrado. Se creó uno por defecto en %s\n", camposFile)
 	}
 
+	// Comprobar si el archivo campos ha cambiado
+	camposBytes, err := ioutil.ReadFile(camposFile)
+	if err != nil {
+		return fmt.Errorf("no se pudo leer el archivo de campos: %w", err)
+	}
+	currentHash := md5.Sum(camposBytes)
+	currentHashStr := hex.EncodeToString(currentHash[:])
+
+	savedHashBytes, err := ioutil.ReadFile(hashFile)
+	if err == nil && string(savedHashBytes) != currentHashStr {
+		fmt.Println("El archivo 'campos' ha cambiado. Re-sincronizando la base de datos desde cero...")
+		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("no se pudo borrar la base de datos antigua: %w", err)
+		}
+	}
+
+	// Proceder con la sincronización
 	campos, err := parseCamposFile(camposFile)
 	if err != nil {
 		return err
 	}
 
-	dbPath := filepath.Join(s.rfcDir, "sat.db")
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err
@@ -436,6 +457,11 @@ total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
 		if err := s.processXMLFile(db, xmlPath, campos); err != nil {
 			fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
 		}
+	}
+
+	// Guardar el hash del archivo de campos actual para futuras comparaciones
+	if err := ioutil.WriteFile(hashFile, []byte(currentHashStr), 0644); err != nil {
+		return fmt.Errorf("no se pudo guardar el hash del archivo de campos: %w", err)
 	}
 
 	return nil
