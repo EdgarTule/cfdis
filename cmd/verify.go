@@ -59,41 +59,55 @@ var verifyCmd = &cobra.Command{
 				fmt.Printf("Error al verificar: %v\n", err)
 				return
 			}
-			handleVerificationResult(service, verifyID, status, downloadIDs, mensaje)
+			// El estado no se conoce aquí, así que lo dejamos vacío.
+			handleVerificationResult(service, verifyID, "", status, downloadIDs, mensaje)
 		} else {
 			// Verificar todos los IDs pendientes
 			fmt.Println("Verificando todas las solicitudes pendientes...")
-			solicitudesFile := filepath.Join(service.rfcDir, "solicitudes.txt")
-			ids, err := readLines(solicitudesFile)
-			if err != nil {
-				fmt.Printf("No se pudieron leer las solicitudes pendientes o el archivo no existe: %v\n", err)
-				return
+			solicitudesFile := filepath.Join(service.rfcDir, "solicitudes.json")
+
+			type Solicitud struct {
+				ID     string `json:"id"`
+				Estado string `json:"estado"`
 			}
 
-			var remainingIDs []string
-			for _, id := range ids {
-				if id == "" {
-					continue
-				}
-				fmt.Printf("Verificando ID: %s\n", id)
-				status, downloadIDs, mensaje, err := service.VerifyRequest(id)
+			var solicitudes []Solicitud
+			if _, err := os.Stat(solicitudesFile); err == nil {
+				data, err := ioutil.ReadFile(solicitudesFile)
 				if err != nil {
-					fmt.Printf("Error al verificar ID %s: %v\n", id, err)
-					remainingIDs = append(remainingIDs, id) // Keep it for next time
+					fmt.Printf("Error al leer el archivo de solicitudes: %v\n", err)
+					return
+				}
+				json.Unmarshal(data, &solicitudes)
+			}
+
+			var remainingSolicitudes []Solicitud
+			for _, sol := range solicitudes {
+				fmt.Printf("Verificando ID: %s\n", sol.ID)
+				status, downloadIDs, mensaje, err := service.VerifyRequest(sol.ID)
+				if err != nil {
+					fmt.Printf("Error al verificar ID %s: %v\n", sol.ID, err)
+					remainingSolicitudes = append(remainingSolicitudes, sol) // Keep it for next time
 					continue
 				}
-				if !handleVerificationResult(service, id, status, downloadIDs, mensaje) {
-					remainingIDs = append(remainingIDs, id)
+				if !handleVerificationResult(service, sol.ID, sol.Estado, status, downloadIDs, mensaje) {
+					remainingSolicitudes = append(remainingSolicitudes, sol)
 				}
 			}
+
 			// Reescribir el archivo de solicitudes con los que no se completaron
-			writeLines(solicitudesFile, remainingIDs)
+			data, err := json.MarshalIndent(remainingSolicitudes, "", "  ")
+			if err != nil {
+				fmt.Printf("Error al serializar el archivo de solicitudes: %v\n", err)
+				return
+			}
+			ioutil.WriteFile(solicitudesFile, data, 0644)
 		}
 	},
 }
 
 // handleVerificationResult procesa el resultado y devuelve true si la solicitud se completó (y debe ser eliminada de la lista de pendientes).
-func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string, mensaje string) bool {
+func handleVerificationResult(s *SatService, requestID, estado string, status int, downloadIDs []string, mensaje string) bool {
 	fmt.Printf("  > Estado: %s (%d) - %s\n", statusToString(status), status, mensaje)
 
 	// Si la solicitud está Terminada (3), se considera manejada.
@@ -101,13 +115,13 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 		// Si el SAT devuelve explícitamente los IDs de paquetes, los usamos.
 		if len(downloadIDs) > 0 {
 			fmt.Printf("  > ¡Éxito! IDs de descarga recibidos explícitamente: %v\n", downloadIDs)
-			saveDownloadIDs(s, downloadIDs)
+			saveDownloadIDs(s, downloadIDs, estado)
 		} else {
 			// Si no, aplicamos el truco descubierto: usar el ID de la solicitud con sufijo.
 			fmt.Println("  > Solicitud terminada sin IDs de paquete explícitos. Intentando generar ID de descarga alternativo.")
 			alternativeID := strings.ToUpper(requestID) + "_01"
 			fmt.Printf("  > ID de descarga generado: %s\n", alternativeID)
-			saveDownloadIDs(s, []string{alternativeID})
+			saveDownloadIDs(s, []string{alternativeID}, estado)
 		}
 		return true // La solicitud se completó y se manejó.
 	}
@@ -122,19 +136,38 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 	return false
 }
 
-// saveDownloadIDs guarda una lista de IDs en el archivo idsdescarga.txt
-func saveDownloadIDs(s *SatService, ids []string) {
-	idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
-	f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+// saveDownloadIDs guarda una lista de IDs en el archivo idsdescarga.json
+func saveDownloadIDs(s *SatService, ids []string, estado string) {
+	idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.json")
+
+	type Descarga struct {
+		ID     string `json:"id"`
+		Estado string `json:"estado"`
+	}
+
+	var descargas []Descarga
+	if _, err := os.Stat(idsDescargaFile); err == nil {
+		data, err := ioutil.ReadFile(idsDescargaFile)
+		if err != nil {
+			fmt.Printf("Error al leer el archivo de descargas: %v\n", err)
+			return
+		}
+		json.Unmarshal(data, &descargas)
+	}
+
+	for _, id := range ids {
+		descargas = append(descargas, Descarga{ID: id, Estado: estado})
+	}
+
+	data, err := json.MarshalIndent(descargas, "", "  ")
 	if err != nil {
-		fmt.Printf("  > Error al abrir archivo de descargas: %v\n", err)
+		fmt.Printf("Error al serializar el archivo de descargas: %v\n", err)
 		return
 	}
-	defer f.Close()
-	for _, id := range ids {
-		if _, err := f.WriteString(id + "\n"); err != nil {
-			fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
-		}
+
+	err = ioutil.WriteFile(idsDescargaFile, data, 0644)
+	if err != nil {
+		fmt.Printf("Error al guardar el ID de descarga: %v\n", err)
 	}
 }
 

@@ -214,7 +214,7 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 
 
 // --- Service Methods ---
-func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string) (string, error) {
+func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate, estado string) (string, error) {
 	// 1. Construir la estructura XML completa
 	var body *etree.Element
 	if reqSubTipo == "emitidos" {
@@ -236,7 +236,7 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string)
 	} else {
 		solicitud.CreateAttr("TipoSolicitud", "CFDI")
 	}
-	solicitud.CreateAttr("EstadoComprobante", "Vigente")
+	solicitud.CreateAttr("EstadoComprobante", estado)
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
@@ -401,7 +401,8 @@ func (s *SatService) SyncDatabase() error {
 
 	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		defaultCampos := `emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
+		defaultCampos := `estado TEXT
+emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
 receptor_rfc CHAR(13) //*[local-name()='Receptor']/@Rfc
 fecha DATETIME //*[local-name()='Comprobante']/@Fecha
 total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
@@ -444,18 +445,31 @@ total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
 	}
 
 	cfdiDir := filepath.Join(s.rfcDir, "cfdis")
-	files, err := ioutil.ReadDir(cfdiDir)
+	statusDirs, err := ioutil.ReadDir(cfdiDir)
 	if err != nil {
 		return fmt.Errorf("no se pudo leer el directorio de cfdis: %w", err)
 	}
 
-	for _, file := range files {
-		if !strings.HasSuffix(file.Name(), ".xml") {
+	for _, statusDir := range statusDirs {
+		if !statusDir.IsDir() {
 			continue
 		}
-		xmlPath := filepath.Join(cfdiDir, file.Name())
-		if err := s.processXMLFile(db, xmlPath, campos); err != nil {
-			fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
+		estado := statusDir.Name()
+		statusDirPath := filepath.Join(cfdiDir, estado)
+		files, err := ioutil.ReadDir(statusDirPath)
+		if err != nil {
+			fmt.Printf("Error al leer el directorio %s: %v\n", statusDirPath, err)
+			continue
+		}
+
+		for _, file := range files {
+			if !strings.HasSuffix(file.Name(), ".xml") {
+				continue
+			}
+			xmlPath := filepath.Join(statusDirPath, file.Name())
+			if err := s.processXMLFile(db, xmlPath, estado, campos); err != nil {
+				fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
+			}
 		}
 	}
 
@@ -492,7 +506,7 @@ func parseCamposFile(path string) ([]Campo, error) {
 
 func createTable(db *sql.DB, campos []Campo) error {
 	var sb strings.Builder
-	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, ")
+	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, estado TEXT, ")
 	for i, campo := range campos {
 		sb.WriteString(fmt.Sprintf("%s %s", campo.Nombre, campo.Tipo))
 		if i < len(campos)-1 {
@@ -505,7 +519,7 @@ func createTable(db *sql.DB, campos []Campo) error {
 	return err
 }
 
-func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) error {
+func (s *SatService) processXMLFile(db *sql.DB, xmlPath, estado string, campos []Campo) error {
 	xmlBytes, err := ioutil.ReadFile(xmlPath)
 	if err != nil {
 		return err
@@ -533,21 +547,22 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 	}
 	fmt.Printf("Insertando XML en la DB: %s\n", filepath.Base(xmlPath))
 
-	values := make([]interface{}, len(campos)+2)
+	values := make([]interface{}, len(campos)+3)
 	values[0] = uuid
 	values[1] = xmlPath
+	values[2] = estado
 	for i, campo := range campos {
 		node := xmlquery.FindOne(doc, campo.XPath)
 		if node != nil {
-			values[i+2] = node.InnerText()
+			values[i+3] = node.InnerText()
 		} else {
-			values[i+2] = nil
+			values[i+3] = nil
 		}
 	}
 
 	var cols, placeholders strings.Builder
-	cols.WriteString("uuid, xml_path")
-	placeholders.WriteString("?, ?")
+	cols.WriteString("uuid, xml_path, estado")
+	placeholders.WriteString("?, ?, ?")
 	for _, campo := range campos {
 		cols.WriteString(", " + campo.Nombre)
 		placeholders.WriteString(", ?")
