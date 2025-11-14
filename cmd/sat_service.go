@@ -285,7 +285,7 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string)
 	return idSolicitud, nil
 }
 
-func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
+func (s *SatService) VerifyRequest(requestID string) (int, []string, string, error) {
 	body := etree.NewElement("des:VerificaSolicitudDescarga")
 	solicitud := body.CreateElement("des:solicitud")
 	solicitud.CreateAttr("IdSolicitud", requestID)
@@ -293,7 +293,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, "", err
 	}
 
 	respBody, err := s.sendSoapRequest(
@@ -301,26 +301,26 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/VerificaSolicitudDescargaService.svc",
 		envelope,
 	)
-	if err != nil { return 0, nil, err }
+	if err != nil { return 0, nil, "", err }
 
 	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
 	if err != nil {
-		return 0, nil, fmt.Errorf("error al parsear XML de respuesta: %w", err)
+		return 0, nil, "", fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
 	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
 	if faultNode != nil {
 		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
-		return 0, nil, fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
+		return 0, nil, "", fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
 	resultNode := xmlquery.FindOne(doc, "//*[@CodEstatus and @EstadoSolicitud]")
 	if resultNode == nil {
-		return 0, nil, fmt.Errorf("no se encontró un nodo de resultado válido ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
+		return 0, nil, "", fmt.Errorf("no se encontró un nodo de resultado válido ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 	codEstatus := resultNode.SelectAttr("CodEstatus")
+	mensaje := resultNode.SelectAttr("Mensaje")
 	if codEstatus != "5000" {
-		mensaje := resultNode.SelectAttr("Mensaje")
-		return 0, nil, fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
+		return 0, nil, "", fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
 	}
 	estadoSolicitud := resultNode.SelectAttr("EstadoSolicitud")
 	status, _ := strconv.Atoi(estadoSolicitud)
@@ -331,7 +331,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 			downloadIDs = append(downloadIDs, n.InnerText())
 		}
 	}
-	return status, downloadIDs, nil
+	return status, downloadIDs, mensaje, nil
 }
 
 func (s *SatService) DownloadPackage(packageID string, targetDir string) error {

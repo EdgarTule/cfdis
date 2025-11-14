@@ -54,12 +54,12 @@ var verifyCmd = &cobra.Command{
 		if verifyID != "" {
 			// Verificar un solo ID
 			fmt.Printf("Verificando ID: %s\n", verifyID)
-			status, downloadIDs, err := service.VerifyRequest(verifyID)
+			status, downloadIDs, mensaje, err := service.VerifyRequest(verifyID)
 			if err != nil {
 				fmt.Printf("Error al verificar: %v\n", err)
 				return
 			}
-			handleVerificationResult(service, verifyID, status, downloadIDs)
+			handleVerificationResult(service, verifyID, status, downloadIDs, mensaje)
 		} else {
 			// Verificar todos los IDs pendientes
 			fmt.Println("Verificando todas las solicitudes pendientes...")
@@ -76,13 +76,13 @@ var verifyCmd = &cobra.Command{
 					continue
 				}
 				fmt.Printf("Verificando ID: %s\n", id)
-				status, downloadIDs, err := service.VerifyRequest(id)
+				status, downloadIDs, mensaje, err := service.VerifyRequest(id)
 				if err != nil {
 					fmt.Printf("Error al verificar ID %s: %v\n", id, err)
 					remainingIDs = append(remainingIDs, id) // Keep it for next time
 					continue
 				}
-				if !handleVerificationResult(service, id, status, downloadIDs) {
+				if !handleVerificationResult(service, id, status, downloadIDs, mensaje) {
 					remainingIDs = append(remainingIDs, id)
 				}
 			}
@@ -93,8 +93,8 @@ var verifyCmd = &cobra.Command{
 }
 
 // handleVerificationResult procesa el resultado y devuelve true si la solicitud se completó (y debe ser eliminada de la lista de pendientes).
-func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string) bool {
-	fmt.Printf("  > Estado: %s (%d)\n", statusToString(status), status)
+func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string, mensaje string) bool {
+	fmt.Printf("  > Estado: %s (%d) - %s\n", statusToString(status), status, mensaje)
 
 	// Si la solicitud está Terminada (3), se considera manejada.
 	if status == 3 {
