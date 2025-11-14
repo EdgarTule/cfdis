@@ -236,7 +236,14 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate, estado
 	} else {
 		solicitud.CreateAttr("TipoSolicitud", "CFDI")
 	}
-	solicitud.CreateAttr("EstadoComprobante", estado)
+
+	var estadoComprobante string
+	if estado == "Cancelado" {
+		estadoComprobante = "0"
+	} else {
+		estadoComprobante = "1"
+	}
+	solicitud.CreateAttr("EstadoComprobante", estadoComprobante)
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
