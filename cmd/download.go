@@ -49,56 +49,42 @@ var downloadCmd = &cobra.Command{
 		}
 
 		// --- Lógica de descarga ---
+		cfdiDir := filepath.Join(service.rfcDir, "cfdis")
+		os.MkdirAll(cfdiDir, 0755)
+
 		if downloadID != "" {
 			// Descargar un solo ID
 			fmt.Printf("Descargando paquete: %s\n", downloadID)
-			// No se conoce el estado, se asume Vigente
-			targetDir := filepath.Join(service.rfcDir, "cfdis", "Vigente")
-			os.MkdirAll(targetDir, 0755)
-			err := service.DownloadPackage(downloadID, targetDir)
+			err := service.DownloadPackage(downloadID, cfdiDir)
 			if err != nil {
 				fmt.Printf("Error al descargar: %v\n", err)
 			}
 		} else {
 			// Descargar todos los IDs pendientes
 			fmt.Println("Descargando todos los paquetes pendientes...")
-			idsDescargaFile := filepath.Join(service.rfcDir, "idsdescarga.json")
-
-			type Descarga struct {
-				ID     string `json:"id"`
-				Estado string `json:"estado"`
+			idsDescargaFile := filepath.Join(service.rfcDir, "idsdescarga.txt")
+			ids, err := readLines(idsDescargaFile)
+			if err != nil {
+				fmt.Printf("No se pudieron leer los IDs de descarga o el archivo no existe: %v\n", err)
+				return
 			}
 
-			var descargas []Descarga
-			if _, err := os.Stat(idsDescargaFile); err == nil {
-				data, err := ioutil.ReadFile(idsDescargaFile)
-				if err != nil {
-					fmt.Printf("Error al leer el archivo de descargas: %v\n", err)
-					return
+			var remainingIDs []string
+			for _, id := range ids {
+				if id == "" {
+					continue
 				}
-				json.Unmarshal(data, &descargas)
-			}
-
-			var remainingDescargas []Descarga
-			for _, desc := range descargas {
-				fmt.Printf("Descargando paquete: %s (%s)\n", desc.ID, desc.Estado)
-				targetDir := filepath.Join(service.rfcDir, "cfdis", desc.Estado)
-				os.MkdirAll(targetDir, 0755)
-				err := service.DownloadPackage(desc.ID, targetDir)
+				fmt.Printf("Descargando paquete: %s\n", id)
+				err := service.DownloadPackage(id, cfdiDir)
 				if err != nil {
-					fmt.Printf("  > Error al descargar el paquete %s: %v\n", desc.ID, err)
-					remainingDescargas = append(remainingDescargas, desc) // Reintentar más tarde
+					fmt.Printf("  > Error al descargar el paquete %s: %v\n", id, err)
+					remainingIDs = append(remainingIDs, id) // Reintentar más tarde
 				} else {
-					fmt.Printf("  > Paquete %s descargado y procesado.\n", desc.ID)
+					fmt.Printf("  > Paquete %s descargado y procesado.\n", id)
 				}
 			}
 			// Reescribir el archivo con los IDs que fallaron
-			data, err := json.MarshalIndent(remainingDescargas, "", "  ")
-			if err != nil {
-				fmt.Printf("Error al serializar el archivo de descargas: %v\n", err)
-				return
-			}
-			ioutil.WriteFile(idsDescargaFile, data, 0644)
+			writeLines(idsDescargaFile, remainingIDs)
 		}
 	},
 }

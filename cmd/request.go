@@ -19,7 +19,6 @@ var (
 	reqSubTipo   string
 	reqStart     string
 	reqEnd       string
-	reqEstado    string
 )
 
 const (
@@ -90,7 +89,7 @@ var requestCmd = &cobra.Command{
 		}
 
 		// --- Firmar y enviar solicitud ---
-		id, err := service.SendRequest(reqTipo, reqSubTipo, reqStart, reqEnd, reqEstado)
+		id, err := service.SendRequest(reqTipo, reqSubTipo, reqStart, reqEnd)
 		if err != nil {
 			fmt.Printf("Error al enviar la solicitud: %v\n", err)
 			return
@@ -99,36 +98,16 @@ var requestCmd = &cobra.Command{
 		fmt.Printf("Solicitud enviada exitosamente. ID de Solicitud: %s\n", id)
 
 		// --- Guardar ID de solicitud ---
-		requestsFile := filepath.Join(service.rfcDir, "solicitudes.json")
-
-		type Solicitud struct {
-			ID     string `json:"id"`
-			Estado string `json:"estado"`
-		}
-
-		var solicitudes []Solicitud
-		if _, err := os.Stat(requestsFile); err == nil {
-			data, err := ioutil.ReadFile(requestsFile)
-			if err != nil {
-				fmt.Printf("Error al leer el archivo de solicitudes: %v\n", err)
-				return
-			}
-			json.Unmarshal(data, &solicitudes)
-		}
-
-		solicitudes = append(solicitudes, Solicitud{ID: id, Estado: reqEstado})
-
-		data, err := json.MarshalIndent(solicitudes, "", "  ")
+		requestsFile := filepath.Join(service.rfcDir, "solicitudes.txt")
+		f, err := os.OpenFile(requestsFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			fmt.Printf("Error al serializar el archivo de solicitudes: %v\n", err)
+			fmt.Printf("Error al abrir el archivo de solicitudes: %v\n", err)
 			return
 		}
-
-		err = ioutil.WriteFile(requestsFile, data, 0644)
-		if err != nil {
+		defer f.Close()
+		if _, err := f.WriteString(id + "\n"); err != nil {
 			fmt.Printf("Error al guardar el ID de solicitud: %v\n", err)
 		}
-
 		fmt.Printf("ID guardado en %s\n", requestsFile)
 	},
 }
@@ -139,7 +118,6 @@ func init() {
 	requestCmd.Flags().StringVar(&reqSubTipo, "tipo", "", "Tipo de comprobante: 'emitidos' o 'recibidos'")
 	requestCmd.Flags().StringVar(&reqStart, "start", "", "Fecha de inicio (YYYY-MM-DDTHH:MM:SS)")
 	requestCmd.Flags().StringVar(&reqEnd, "end", "", "Fecha de fin (YYYY-MM-DDTHH:MM:SS)")
-	requestCmd.Flags().StringVar(&reqEstado, "estado", "Vigente", "Estado del comprobante: 'Vigente' o 'Cancelado'")
 	requestCmd.MarkFlagRequired("rfc")
 	requestCmd.MarkFlagRequired("tipo")
 	requestCmd.MarkFlagRequired("start")

@@ -214,7 +214,7 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 
 
 // --- Service Methods ---
-func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate, estado string) (string, error) {
+func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string) (string, error) {
 	// 1. Construir la estructura XML completa
 	var body *etree.Element
 	if reqSubTipo == "emitidos" {
@@ -236,14 +236,7 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate, estado
 	} else {
 		solicitud.CreateAttr("TipoSolicitud", "CFDI")
 	}
-
-	var estadoComprobante string
-	if estado == "Cancelado" {
-		estadoComprobante = "0"
-	} else {
-		estadoComprobante = "1"
-	}
-	solicitud.CreateAttr("EstadoComprobante", estadoComprobante)
+	solicitud.CreateAttr("EstadoComprobante", "Vigente")
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
@@ -292,7 +285,7 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate, estado
 	return idSolicitud, nil
 }
 
-func (s *SatService) VerifyRequest(requestID string) (int, []string, string, error) {
+func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 	body := etree.NewElement("des:VerificaSolicitudDescarga")
 	solicitud := body.CreateElement("des:solicitud")
 	solicitud.CreateAttr("IdSolicitud", requestID)
@@ -300,7 +293,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, string, err
 
 	envelope, err := s.buildSoapEnvelope(body, solicitud)
 	if err != nil {
-		return 0, nil, "", err
+		return 0, nil, err
 	}
 
 	respBody, err := s.sendSoapRequest(
@@ -308,26 +301,26 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, string, err
 		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/VerificaSolicitudDescargaService.svc",
 		envelope,
 	)
-	if err != nil { return 0, nil, "", err }
+	if err != nil { return 0, nil, err }
 
 	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
 	if err != nil {
-		return 0, nil, "", fmt.Errorf("error al parsear XML de respuesta: %w", err)
+		return 0, nil, fmt.Errorf("error al parsear XML de respuesta: %w", err)
 	}
 	faultNode := xmlquery.FindOne(doc, "//*[local-name()='Fault']")
 	if faultNode != nil {
 		faultCode := xmlquery.FindOne(faultNode, "//*[local-name()='faultcode']")
 		faultString := xmlquery.FindOne(faultNode, "//*[local-name()='faultstring']")
-		return 0, nil, "", fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
+		return 0, nil, fmt.Errorf("el servidor SAT devolvió un error (SOAP Fault): [%s] %s", faultCode.InnerText(), faultString.InnerText())
 	}
 	resultNode := xmlquery.FindOne(doc, "//*[@CodEstatus and @EstadoSolicitud]")
 	if resultNode == nil {
-		return 0, nil, "", fmt.Errorf("no se encontró un nodo de resultado válido ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
+		return 0, nil, fmt.Errorf("no se encontró un nodo de resultado válido ni 'Fault' en la respuesta. Respuesta cruda: %s", string(respBody))
 	}
 	codEstatus := resultNode.SelectAttr("CodEstatus")
-	mensaje := resultNode.SelectAttr("Mensaje")
 	if codEstatus != "5000" {
-		return 0, nil, "", fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
+		mensaje := resultNode.SelectAttr("Mensaje")
+		return 0, nil, fmt.Errorf("error del SAT: [%s] %s", codEstatus, mensaje)
 	}
 	estadoSolicitud := resultNode.SelectAttr("EstadoSolicitud")
 	status, _ := strconv.Atoi(estadoSolicitud)
@@ -338,7 +331,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, string, err
 			downloadIDs = append(downloadIDs, n.InnerText())
 		}
 	}
-	return status, downloadIDs, mensaje, nil
+	return status, downloadIDs, nil
 }
 
 func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
@@ -408,8 +401,7 @@ func (s *SatService) SyncDatabase() error {
 
 	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		defaultCampos := `estado TEXT
-emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
+		defaultCampos := `emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
 receptor_rfc CHAR(13) //*[local-name()='Receptor']/@Rfc
 fecha DATETIME //*[local-name()='Comprobante']/@Fecha
 total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
@@ -452,31 +444,18 @@ total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
 	}
 
 	cfdiDir := filepath.Join(s.rfcDir, "cfdis")
-	statusDirs, err := ioutil.ReadDir(cfdiDir)
+	files, err := ioutil.ReadDir(cfdiDir)
 	if err != nil {
 		return fmt.Errorf("no se pudo leer el directorio de cfdis: %w", err)
 	}
 
-	for _, statusDir := range statusDirs {
-		if !statusDir.IsDir() {
+	for _, file := range files {
+		if !strings.HasSuffix(file.Name(), ".xml") {
 			continue
 		}
-		estado := statusDir.Name()
-		statusDirPath := filepath.Join(cfdiDir, estado)
-		files, err := ioutil.ReadDir(statusDirPath)
-		if err != nil {
-			fmt.Printf("Error al leer el directorio %s: %v\n", statusDirPath, err)
-			continue
-		}
-
-		for _, file := range files {
-			if !strings.HasSuffix(file.Name(), ".xml") {
-				continue
-			}
-			xmlPath := filepath.Join(statusDirPath, file.Name())
-			if err := s.processXMLFile(db, xmlPath, estado, campos); err != nil {
-				fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
-			}
+		xmlPath := filepath.Join(cfdiDir, file.Name())
+		if err := s.processXMLFile(db, xmlPath, campos); err != nil {
+			fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
 		}
 	}
 
@@ -513,7 +492,7 @@ func parseCamposFile(path string) ([]Campo, error) {
 
 func createTable(db *sql.DB, campos []Campo) error {
 	var sb strings.Builder
-	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, estado TEXT, ")
+	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, ")
 	for i, campo := range campos {
 		sb.WriteString(fmt.Sprintf("%s %s", campo.Nombre, campo.Tipo))
 		if i < len(campos)-1 {
@@ -526,7 +505,7 @@ func createTable(db *sql.DB, campos []Campo) error {
 	return err
 }
 
-func (s *SatService) processXMLFile(db *sql.DB, xmlPath, estado string, campos []Campo) error {
+func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) error {
 	xmlBytes, err := ioutil.ReadFile(xmlPath)
 	if err != nil {
 		return err
@@ -554,22 +533,21 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath, estado string, campos [
 	}
 	fmt.Printf("Insertando XML en la DB: %s\n", filepath.Base(xmlPath))
 
-	values := make([]interface{}, len(campos)+3)
+	values := make([]interface{}, len(campos)+2)
 	values[0] = uuid
 	values[1] = xmlPath
-	values[2] = estado
 	for i, campo := range campos {
 		node := xmlquery.FindOne(doc, campo.XPath)
 		if node != nil {
-			values[i+3] = node.InnerText()
+			values[i+2] = node.InnerText()
 		} else {
-			values[i+3] = nil
+			values[i+2] = nil
 		}
 	}
 
 	var cols, placeholders strings.Builder
-	cols.WriteString("uuid, xml_path, estado")
-	placeholders.WriteString("?, ?, ?")
+	cols.WriteString("uuid, xml_path")
+	placeholders.WriteString("?, ?")
 	for _, campo := range campos {
 		cols.WriteString(", " + campo.Nombre)
 		placeholders.WriteString(", ?")
