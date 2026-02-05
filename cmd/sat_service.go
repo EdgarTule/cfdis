@@ -58,18 +58,20 @@ type Campo struct {
 
 // SatService provides methods to interact with SAT web services.
 type SatService struct {
-	rfc       string
-	rfcDir    string
-	key       *rsa.PrivateKey
-	cert      *x509.Certificate
-	token     string
-	tokenPath string
+	rfc         string
+	rfcDir      string
+	key         *rsa.PrivateKey
+	cert        *x509.Certificate
+	token       string
+	tokenPath   string
+	serviceType string // "cfdi" o "retenciones"
 }
 
 // NewSatService creates a new service client.
 func NewSatService(rfc string, keyPath string, cerPath string, password []byte) (*SatService, error) {
 	homeDir, _ := os.UserHomeDir()
 	rfcDir := filepath.Join(homeDir, ".sat", rfc)
+	os.MkdirAll(rfcDir, 0755)
 
 	var rsaPrivateKey *rsa.PrivateKey
 	var cert *x509.Certificate
@@ -100,8 +102,31 @@ func NewSatService(rfc string, keyPath string, cerPath string, password []byte) 
 
 	return &SatService{
 		rfc: rfc, rfcDir: rfcDir, key: rsaPrivateKey, cert: cert,
-		tokenPath: filepath.Join(rfcDir, "token.txt"),
+		serviceType: "cfdi",
+		tokenPath:   filepath.Join(rfcDir, "token_cfdi.txt"),
 	}, nil
+}
+
+func (s *SatService) SetServiceType(t string) {
+	s.serviceType = t
+	s.tokenPath = filepath.Join(s.rfcDir, "token_"+t+".txt")
+	s.token = "" // Reset token to force reload/re-auth if type changes
+}
+
+func (s *SatService) getBaseURL(service string) string {
+	prefix := "cfdi"
+	if s.serviceType == "retenciones" {
+		prefix = "retencion"
+	}
+
+	switch service {
+	case "auth", "solicita", "verifica":
+		return fmt.Sprintf("https://%sdescargamasivasolicitud.clouda.sat.gob.mx", prefix)
+	case "descarga":
+		return fmt.Sprintf("https://%sdescargamasiva.clouda.sat.gob.mx", prefix)
+	default:
+		return ""
+	}
 }
 
 // --- Authentication ---
@@ -109,6 +134,7 @@ func (s *SatService) EnsureAuthenticated() error {
 	if s.key == nil {
 		return fmt.Errorf("las credenciales (e.firma) no se cargaron; no se puede autenticar")
 	}
+	// Si cambiamos de tipo de servicio, el tokenPath ya fue actualizado en SetServiceType.
 	if info, err := os.Stat(s.tokenPath); err == nil && time.Since(info.ModTime()) < (4*time.Minute) {
 		tokenBytes, err := ioutil.ReadFile(s.tokenPath)
 		if err == nil {
@@ -138,7 +164,8 @@ func (s *SatService) authenticate() error {
 	signature := base64.StdEncoding.EncodeToString(signatureBytes)
 	certBase64 := base64.StdEncoding.EncodeToString(s.cert.Raw)
 	soapRequest := fmt.Sprintf(`<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:u="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><s:Header><o:Security s:mustUnderstand="1" xmlns:o="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"><u:Timestamp u:Id="_0"><u:Created>%s</u:Created><u:Expires>%s</u:Expires></u:Timestamp><o:BinarySecurityToken u:Id="uuid-ee5df542-c65a-423c-974a-a0cb38f6501a-1" ValueType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">%s</o:BinarySecurityToken><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#_0"><Transforms><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>%s</DigestValue></Reference></SignedInfo><SignatureValue>%s</SignatureValue><KeyInfo><o:SecurityTokenReference><o:Reference ValueType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3" URI="#uuid-ee5df542-c65a-423c-974a-a0cb38f6501a-1"/></o:SecurityTokenReference></KeyInfo></Signature></o:Security></s:Header><s:Body><Autentica xmlns="http://DescargaMasivaTerceros.gob.mx"/></s:Body></s:Envelope>`, created, expires, certBase64, digest, signature)
-	req, err := http.NewRequest("POST", "https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/Autenticacion/Autenticacion.svc", strings.NewReader(soapRequest))
+	authURL := s.getBaseURL("auth") + "/Autenticacion/Autenticacion.svc"
+	req, err := http.NewRequest("POST", authURL, strings.NewReader(soapRequest))
 	if err != nil { return err }
 	req.Header.Set("Content-Type", "text/xml;charset=UTF-8")
 	req.Header.Set("SOAPAction", "http://DescargaMasivaTerceros.gob.mx/IAutenticacion/Autentica")
@@ -214,7 +241,7 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 
 
 // --- Service Methods ---
-func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string) (string, error) {
+func (s *SatService) SendRequest(reqSubTipo, startDate, endDate string) (string, error) {
 	// 1. Construir la estructura XML completa
 	var body *etree.Element
 	if reqSubTipo == "emitidos" {
@@ -231,11 +258,9 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string)
 		solicitud.CreateAttr("RfcReceptor", s.rfc)
 	}
 
-	if reqTipo == "retenciones" {
-		solicitud.CreateAttr("TipoSolicitud", "Retencion")
-	} else {
-		solicitud.CreateAttr("TipoSolicitud", "CFDI")
-	}
+	// El valor de TipoSolicitud siempre debe ser CFDI o Metadata.
+	// Para retenciones, se usa el endpoint de retenciones pero el valor sigue siendo CFDI.
+	solicitud.CreateAttr("TipoSolicitud", "CFDI")
 	solicitud.CreateAttr("EstadoComprobante", "Vigente")
 
 	// 2. Firmar el nodo <solicitud> y construir el sobre
@@ -251,9 +276,10 @@ func (s *SatService) SendRequest(reqTipo, reqSubTipo, startDate, endDate string)
 	} else {
 		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"
 	}
+	solicitaURL := s.getBaseURL("solicita") + "/SolicitaDescargaService.svc"
 	respBody, err := s.sendSoapRequest(
 		soapAction,
-		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/SolicitaDescargaService.svc",
+		solicitaURL,
 		envelope,
 	)
 	if err != nil { return "", err }
@@ -296,9 +322,10 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 		return 0, nil, err
 	}
 
+	verificaURL := s.getBaseURL("verifica") + "/VerificaSolicitudDescargaService.svc"
 	respBody, err := s.sendSoapRequest(
 		"http://DescargaMasivaTerceros.sat.gob.mx/IVerificaSolicitudDescargaService/VerificaSolicitudDescarga",
-		"https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/VerificaSolicitudDescargaService.svc",
+		verificaURL,
 		envelope,
 	)
 	if err != nil { return 0, nil, err }
@@ -345,9 +372,10 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 		return err
 	}
 
+	descargaURL := s.getBaseURL("descarga") + "/DescargaMasivaService.svc"
 	respBody, err := s.sendSoapRequest(
 		"http://DescargaMasivaTerceros.sat.gob.mx/IDescargaMasivaTercerosService/Descargar",
-		"https://cfdidescargamasiva.clouda.sat.gob.mx/DescargaMasivaService.svc",
+		descargaURL,
 		envelope,
 	)
 	if err != nil { return err }
