@@ -57,6 +57,10 @@ var downloadCmd = &cobra.Command{
 		if downloadID != "" {
 			// Descargar un solo ID
 			service.SetServiceType(downloadTipo)
+			if err := service.EnsureAuthenticated(); err != nil {
+				fmt.Printf("Error de autenticación: %v\n", err)
+				return
+			}
 			fmt.Printf("Descargando paquete: %s (tipo: %s)\n", downloadID, downloadTipo)
 			err := service.DownloadPackage(downloadID, cfdiDir)
 			if err != nil {
