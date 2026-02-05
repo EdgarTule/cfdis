@@ -122,8 +122,9 @@ func (s *SatService) getNamespace() string {
 
 func (s *SatService) getBaseURL(service string) string {
 	prefix := "cfdi"
-	// Aunque el servicio sea retenciones, usamos el host de cfdi ya que parece estar unificado
-	// o el host de retenciones no resuelve en muchos casos.
+	if s.serviceType == "retenciones" {
+		prefix = "reten"
+	}
 
 	switch service {
 	case "auth", "solicita", "verifica":
