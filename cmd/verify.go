@@ -85,6 +85,11 @@ var verifyCmd = &cobra.Command{
 				}
 
 				service.SetServiceType(tipo)
+				if err := service.EnsureAuthenticated(); err != nil {
+					fmt.Printf("Error de autenticación para ID %s (%s): %v\n", id, tipo, err)
+					remainingLines = append(remainingLines, line)
+					continue
+				}
 				fmt.Printf("Verificando ID: %s (tipo: %s)\n", id, tipo)
 
 				status, downloadIDs, err := service.VerifyRequest(id)

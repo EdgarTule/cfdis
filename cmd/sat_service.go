@@ -113,10 +113,17 @@ func (s *SatService) SetServiceType(t string) {
 	s.token = "" // Reset token to force reload/re-auth if type changes
 }
 
+func (s *SatService) getNamespace() string {
+	if s.serviceType == "retenciones" {
+		return "http://DescargaMasivaTerceros.gob.mx"
+	}
+	return "http://DescargaMasivaTerceros.sat.gob.mx"
+}
+
 func (s *SatService) getBaseURL(service string) string {
 	prefix := "cfdi"
 	if s.serviceType == "retenciones" {
-		prefix = "retencion"
+		prefix = "retencionescfdi"
 	}
 
 	switch service {
@@ -218,7 +225,7 @@ func (s *SatService) sendSoapRequest(soapAction, url string, envelope *etree.Ele
 func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (*etree.Element, error) {
 	envelope := etree.NewElement("s:Envelope")
 	envelope.CreateAttr("xmlns:s", "http://schemas.xmlsoap.org/soap/envelope/")
-	envelope.CreateAttr("xmlns:des", "http://DescargaMasivaTerceros.sat.gob.mx")
+	envelope.CreateAttr("xmlns:des", s.getNamespace())
 	envelope.CreateAttr("xmlns:xd", "http://www.w3.org/2000/09/xmldsig#")
 	envelope.CreateElement("s:Header")
 	bodyContainer := envelope.CreateElement("s:Body")
@@ -244,10 +251,14 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 func (s *SatService) SendRequest(reqSubTipo, startDate, endDate string) (string, error) {
 	// 1. Construir la estructura XML completa
 	var body *etree.Element
-	if reqSubTipo == "emitidos" {
-		body = etree.NewElement("des:SolicitaDescargaEmitidos")
+	if s.serviceType == "retenciones" {
+		body = etree.NewElement("des:SolicitaDescarga")
 	} else {
-		body = etree.NewElement("des:SolicitaDescargaRecibidos")
+		if reqSubTipo == "emitidos" {
+			body = etree.NewElement("des:SolicitaDescargaEmitidos")
+		} else {
+			body = etree.NewElement("des:SolicitaDescargaRecibidos")
+		}
 	}
 	solicitud := body.CreateElement("des:solicitud") // Este es el nodo que se firmará
 	solicitud.CreateAttr("FechaInicial", startDate)
@@ -271,10 +282,15 @@ func (s *SatService) SendRequest(reqSubTipo, startDate, endDate string) (string,
 
 	// 3. Enviar la petición
 	var soapAction string
-	if reqSubTipo == "emitidos" {
-		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaEmitidos"
+	ns := s.getNamespace()
+	if s.serviceType == "retenciones" {
+		soapAction = ns + "/ISolicitaDescargaService/SolicitaDescarga"
 	} else {
-		soapAction = "http://DescargaMasivaTerceros.sat.gob.mx/ISolicitaDescargaService/SolicitaDescargaRecibidos"
+		if reqSubTipo == "emitidos" {
+			soapAction = ns + "/ISolicitaDescargaService/SolicitaDescargaEmitidos"
+		} else {
+			soapAction = ns + "/ISolicitaDescargaService/SolicitaDescargaRecibidos"
+		}
 	}
 	solicitaURL := s.getBaseURL("solicita") + "/SolicitaDescargaService.svc"
 	respBody, err := s.sendSoapRequest(
@@ -324,7 +340,7 @@ func (s *SatService) VerifyRequest(requestID string) (int, []string, error) {
 
 	verificaURL := s.getBaseURL("verifica") + "/VerificaSolicitudDescargaService.svc"
 	respBody, err := s.sendSoapRequest(
-		"http://DescargaMasivaTerceros.sat.gob.mx/IVerificaSolicitudDescargaService/VerificaSolicitudDescarga",
+		s.getNamespace()+"/IVerificaSolicitudDescargaService/VerificaSolicitudDescarga",
 		verificaURL,
 		envelope,
 	)
@@ -374,7 +390,7 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 
 	descargaURL := s.getBaseURL("descarga") + "/DescargaMasivaService.svc"
 	respBody, err := s.sendSoapRequest(
-		"http://DescargaMasivaTerceros.sat.gob.mx/IDescargaMasivaTercerosService/Descargar",
+		s.getNamespace()+"/IDescargaMasivaTercerosService/Descargar",
 		descargaURL,
 		envelope,
 	)
