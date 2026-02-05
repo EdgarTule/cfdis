@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	verifyRfc string
-	verifyID  string
+	verifyRfc  string
+	verifyID   string
+	verifyTipo string
 )
 
 var verifyCmd = &cobra.Command{
@@ -53,13 +54,18 @@ var verifyCmd = &cobra.Command{
 		// --- Lógica de verificación ---
 		if verifyID != "" {
 			// Verificar un solo ID
-			fmt.Printf("Verificando ID: %s\n", verifyID)
+			service.SetServiceType(verifyTipo)
+			if err := service.EnsureAuthenticated(); err != nil {
+				fmt.Printf("Error de autenticación: %v\n", err)
+				return
+			}
+			fmt.Printf("Verificando ID: %s (tipo: %s)\n", verifyID, verifyTipo)
 			status, downloadIDs, err := service.VerifyRequest(verifyID)
 			if err != nil {
 				fmt.Printf("Error al verificar: %v\n", err)
 				return
 			}
-			handleVerificationResult(service, verifyID, status, downloadIDs)
+			handleVerificationResult(service, verifyID, status, downloadIDs, verifyTipo)
 		} else {
 			// Verificar todos los IDs pendientes
 			fmt.Println("Verificando todas las solicitudes pendientes...")
@@ -70,30 +76,44 @@ var verifyCmd = &cobra.Command{
 				return
 			}
 
-			var remainingIDs []string
-			for _, id := range ids {
-				if id == "" {
+			var remainingLines []string
+			for _, line := range ids {
+				if line == "" {
 					continue
 				}
-				fmt.Printf("Verificando ID: %s\n", id)
+				parts := strings.Split(line, "|")
+				id := parts[0]
+				tipo := "cfdi"
+				if len(parts) > 1 {
+					tipo = parts[1]
+				}
+
+				service.SetServiceType(tipo)
+				if err := service.EnsureAuthenticated(); err != nil {
+					fmt.Printf("Error de autenticación para ID %s (%s): %v\n", id, tipo, err)
+					remainingLines = append(remainingLines, line)
+					continue
+				}
+				fmt.Printf("Verificando ID: %s (tipo: %s)\n", id, tipo)
+
 				status, downloadIDs, err := service.VerifyRequest(id)
 				if err != nil {
 					fmt.Printf("Error al verificar ID %s: %v\n", id, err)
-					remainingIDs = append(remainingIDs, id) // Keep it for next time
+					remainingLines = append(remainingLines, line) // Keep it for next time
 					continue
 				}
-				if !handleVerificationResult(service, id, status, downloadIDs) {
-					remainingIDs = append(remainingIDs, id)
+				if !handleVerificationResult(service, id, status, downloadIDs, tipo) {
+					remainingLines = append(remainingLines, line)
 				}
 			}
 			// Reescribir el archivo de solicitudes con los que no se completaron
-			writeLines(solicitudesFile, remainingIDs)
+			writeLines(solicitudesFile, remainingLines)
 		}
 	},
 }
 
 // handleVerificationResult procesa el resultado y devuelve true si la solicitud se completó (y debe ser eliminada de la lista de pendientes).
-func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string) bool {
+func handleVerificationResult(s *SatService, requestID string, status int, downloadIDs []string, tipo string) bool {
 	fmt.Printf("  > Estado: %s (%d)\n", statusToString(status), status)
 
 	// Si la solicitud está Terminada (3), se considera manejada.
@@ -101,13 +121,13 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 		// Si el SAT devuelve explícitamente los IDs de paquetes, los usamos.
 		if len(downloadIDs) > 0 {
 			fmt.Printf("  > ¡Éxito! IDs de descarga recibidos explícitamente: %v\n", downloadIDs)
-			saveDownloadIDs(s, downloadIDs)
+			saveDownloadIDs(s, downloadIDs, tipo)
 		} else {
 			// Si no, aplicamos el truco descubierto: usar el ID de la solicitud con sufijo.
 			fmt.Println("  > Solicitud terminada sin IDs de paquete explícitos. Intentando generar ID de descarga alternativo.")
 			alternativeID := strings.ToUpper(requestID) + "_01"
 			fmt.Printf("  > ID de descarga generado: %s\n", alternativeID)
-			saveDownloadIDs(s, []string{alternativeID})
+			saveDownloadIDs(s, []string{alternativeID}, tipo)
 		}
 		return true // La solicitud se completó y se manejó.
 	}
@@ -123,7 +143,7 @@ func handleVerificationResult(s *SatService, requestID string, status int, downl
 }
 
 // saveDownloadIDs guarda una lista de IDs en el archivo idsdescarga.txt
-func saveDownloadIDs(s *SatService, ids []string) {
+func saveDownloadIDs(s *SatService, ids []string, tipo string) {
 	idsDescargaFile := filepath.Join(s.rfcDir, "idsdescarga.txt")
 	f, err := os.OpenFile(idsDescargaFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -132,7 +152,7 @@ func saveDownloadIDs(s *SatService, ids []string) {
 	}
 	defer f.Close()
 	for _, id := range ids {
-		if _, err := f.WriteString(id + "\n"); err != nil {
+		if _, err := f.WriteString(fmt.Sprintf("%s|%s\n", id, tipo)); err != nil {
 			fmt.Printf("  > Error al guardar ID de descarga %s: %v\n", id, err)
 		}
 	}
@@ -189,6 +209,7 @@ func writeLines(path string, lines []string) error {
 func init() {
 	verifyCmd.Flags().StringVar(&verifyRfc, "rfc", "", "RFC del contribuyente")
 	verifyCmd.Flags().StringVar(&verifyID, "id", "", "ID de la solicitud a verificar (opcional)")
+	verifyCmd.Flags().StringVar(&verifyTipo, "solicitud", "cfdi", "Tipo de solicitud: 'cfdi' o 'retenciones' (solo si se usa --id)")
 	verifyCmd.MarkFlagRequired("rfc")
 
 	rootCmd.AddCommand(verifyCmd)

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"encoding/json"
 
@@ -13,8 +14,9 @@ import (
 )
 
 var (
-	downloadRfc string
-	downloadID  string
+	downloadRfc  string
+	downloadID   string
+	downloadTipo string
 )
 
 var downloadCmd = &cobra.Command{
@@ -54,7 +56,12 @@ var downloadCmd = &cobra.Command{
 
 		if downloadID != "" {
 			// Descargar un solo ID
-			fmt.Printf("Descargando paquete: %s\n", downloadID)
+			service.SetServiceType(downloadTipo)
+			if err := service.EnsureAuthenticated(); err != nil {
+				fmt.Printf("Error de autenticación: %v\n", err)
+				return
+			}
+			fmt.Printf("Descargando paquete: %s (tipo: %s)\n", downloadID, downloadTipo)
 			err := service.DownloadPackage(downloadID, cfdiDir)
 			if err != nil {
 				fmt.Printf("Error al descargar: %v\n", err)
@@ -69,22 +76,36 @@ var downloadCmd = &cobra.Command{
 				return
 			}
 
-			var remainingIDs []string
-			for _, id := range ids {
-				if id == "" {
+			var remainingLines []string
+			for _, line := range ids {
+				if line == "" {
 					continue
 				}
-				fmt.Printf("Descargando paquete: %s\n", id)
+				parts := strings.Split(line, "|")
+				id := parts[0]
+				tipo := "cfdi"
+				if len(parts) > 1 {
+					tipo = parts[1]
+				}
+
+				service.SetServiceType(tipo)
+				if err := service.EnsureAuthenticated(); err != nil {
+					fmt.Printf("Error de autenticación para paquete %s (%s): %v\n", id, tipo, err)
+					remainingLines = append(remainingLines, line)
+					continue
+				}
+				fmt.Printf("Descargando paquete: %s (tipo: %s)\n", id, tipo)
+
 				err := service.DownloadPackage(id, cfdiDir)
 				if err != nil {
 					fmt.Printf("  > Error al descargar el paquete %s: %v\n", id, err)
-					remainingIDs = append(remainingIDs, id) // Reintentar más tarde
+					remainingLines = append(remainingLines, line) // Reintentar más tarde
 				} else {
 					fmt.Printf("  > Paquete %s descargado y procesado.\n", id)
 				}
 			}
 			// Reescribir el archivo con los IDs que fallaron
-			writeLines(idsDescargaFile, remainingIDs)
+			writeLines(idsDescargaFile, remainingLines)
 		}
 	},
 }
@@ -93,6 +114,7 @@ var downloadCmd = &cobra.Command{
 func init() {
 	downloadCmd.Flags().StringVar(&downloadRfc, "rfc", "", "RFC del contribuyente")
 	downloadCmd.Flags().StringVar(&downloadID, "id", "", "ID del paquete a descargar (opcional)")
+	downloadCmd.Flags().StringVar(&downloadTipo, "solicitud", "cfdi", "Tipo de solicitud: 'cfdi' o 'retenciones' (solo si se usa --id)")
 	downloadCmd.MarkFlagRequired("rfc")
 
 	rootCmd.AddCommand(downloadCmd)

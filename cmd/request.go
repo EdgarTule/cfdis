@@ -83,13 +83,15 @@ var requestCmd = &cobra.Command{
 			fmt.Printf("Error al inicializar servicio: %v\n", err)
 			return
 		}
+		service.SetServiceType(reqTipo)
+
 		if err := service.EnsureAuthenticated(); err != nil {
 			fmt.Printf("Error de autenticación: %v\n", err)
 			return
 		}
 
 		// --- Firmar y enviar solicitud ---
-		id, err := service.SendRequest(reqTipo, reqSubTipo, reqStart, reqEnd)
+		id, err := service.SendRequest(reqSubTipo, reqStart, reqEnd)
 		if err != nil {
 			fmt.Printf("Error al enviar la solicitud: %v\n", err)
 			return
@@ -105,7 +107,7 @@ var requestCmd = &cobra.Command{
 			return
 		}
 		defer f.Close()
-		if _, err := f.WriteString(id + "\n"); err != nil {
+		if _, err := f.WriteString(fmt.Sprintf("%s|%s\n", id, reqTipo)); err != nil {
 			fmt.Printf("Error al guardar el ID de solicitud: %v\n", err)
 		}
 		fmt.Printf("ID guardado en %s\n", requestsFile)
