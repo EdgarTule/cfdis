@@ -9,8 +9,8 @@ La aplicación permite registrar RFCs, autenticarse, solicitar, verificar y desc
 
 - **Gestión por RFC:** Cada RFC registrado tiene su propio directorio de trabajo en `~/.sat/<RFC>/`, que contiene su configuración, token de autenticación y archivos descargados.
 - **Flujo de Descarga Completo:** Soporta todo el ciclo de vida de la descarga masiva: autenticación, solicitud, verificación y descarga.
-- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite. La estructura de la tabla se puede definir mediante un archivo `campos`.
-- **Reportes:** Permite ejecutar consultas SQL sobre la base de datos para generar reportes.
+- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite. La estructura de la tabla se puede definir mediante un archivo `campos`. Soporta CFDI 3.3 y 4.0, incluyendo impuestos y complementos.
+- **Reportes y Exportación:** Permite ejecutar consultas SQL sobre la base de datos para generar reportes en consola o exportarlos directamente a archivos **CSV**.
 
 ## Instalación
 
@@ -87,11 +87,11 @@ Escanea los XML descargados y guarda sus metadatos en una base de datos SQLite (
 ```bash
 ./sat db-sync --rfc TU_RFC_AQUI
 ```
-La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sat/<RFC>/campos`. Puedes editar este archivo para personalizar los campos que se extraen de los XML.
+La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sat/<RFC>/campos` con una lista exhaustiva de campos (Impuestos, Nómina, Pagos, Carta Porte, etc.). Puedes consultar el archivo `campos_completos.txt` en la raíz de este repositorio para ver todos los campos disponibles y sus XPaths.
 
 ### 7. Generar un Reporte
 
-Ejecuta una consulta sobre la base de datos SQLite.
+Ejecuta una consulta sobre la base de datos SQLite. Puedes ver los resultados en consola o exportarlos a CSV.
 
 ```bash
 # Ejecutar una consulta por defecto (SELECT * FROM cfdis)
@@ -99,6 +99,9 @@ Ejecuta una consulta sobre la base de datos SQLite.
 
 # Ejecutar una consulta personalizada
 ./sat report --rfc TU_RFC_AQUI -q "SELECT uuid, fecha, total FROM cfdis WHERE total > 1000;"
+
+# Exportar el resultado a un archivo CSV
+./sat report --rfc TU_RFC_AQUI --csv reporte_enero.csv
 ```
 
 main
