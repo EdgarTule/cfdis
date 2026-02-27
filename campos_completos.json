@@ -1,0 +1,49 @@
+{
+  "comprobante": [
+    {"nombre": "version", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Version"},
+    {"nombre": "serie", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Serie"},
+    {"nombre": "folio", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Folio"},
+    {"nombre": "fecha", "tipo": "DATETIME", "xpath": "//*[local-name()='Comprobante']/@Fecha"},
+    {"nombre": "forma_pago", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@FormaPago"},
+    {"nombre": "subtotal", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@SubTotal"},
+    {"nombre": "descuento", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@Descuento"},
+    {"nombre": "moneda", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Moneda"},
+    {"nombre": "total", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@Total"},
+    {"nombre": "tipo_comprobante", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@TipoDeComprobante"},
+    {"nombre": "metodo_pago", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@MetodoPago"},
+    {"nombre": "lugar_expedicion", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@LugarExpedicion"}
+  ],
+  "emisor": [
+    {"nombre": "emisor_rfc", "tipo": "TEXT", "xpath": "//*[local-name()='Emisor']/@Rfc"},
+    {"nombre": "emisor_nombre", "tipo": "TEXT", "xpath": "//*[local-name()='Emisor']/@Nombre"},
+    {"nombre": "emisor_regimen_fiscal", "tipo": "TEXT", "xpath": "//*[local-name()='Emisor']/@RegimenFiscal"}
+  ],
+  "receptor": [
+    {"nombre": "receptor_rfc", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@Rfc"},
+    {"nombre": "receptor_nombre", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@Nombre"},
+    {"nombre": "receptor_domicilio_fiscal", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@DomicilioFiscalReceptor"},
+    {"nombre": "receptor_regimen_fiscal", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@RegimenFiscalReceptor"},
+    {"nombre": "receptor_uso_cfdi", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@UsoCFDI"}
+  ],
+  "impuestos": [
+    {"nombre": "total_impuestos_retenidos", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Impuestos']/@TotalImpuestosRetenidos"},
+    {"nombre": "total_impuestos_trasladados", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Impuestos']/@TotalImpuestosTrasladados"},
+    {"nombre": "iva_trasladado", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Traslado'][@Impuesto='002']/@Importe"},
+    {"nombre": "iva_retenido", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Retencion'][@Impuesto='002']/@Importe"},
+    {"nombre": "total_retenciones_locales", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='ImpuestosLocales']/@TotaldeRetenciones"},
+    {"nombre": "total_traslados_locales", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='ImpuestosLocales']/@TotaldeTraslados"}
+  ],
+  "nomina": [
+    {"nombre": "nomina_tipo_nomina", "tipo": "TEXT", "xpath": "//*[local-name()='Nomina']/@TipoNomina"},
+    {"nombre": "nomina_fecha_pago", "tipo": "TEXT", "xpath": "//*[local-name()='Nomina']/@FechaPago"},
+    {"nombre": "nomina_total_percepciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalPercepciones"},
+    {"nombre": "nomina_total_deducciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalDeducciones"}
+  ],
+  "pagos": [
+    {"nombre": "pagos_monto_total_pagos", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@MontoTotalPagos"}
+  ],
+  "carta_porte": [
+    {"nombre": "cp_version", "tipo": "TEXT", "xpath": "//*[local-name()='CartaPorte']/@Version"},
+    {"nombre": "cp_total_dist_recorrida", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='CartaPorte']/@TotalDistRecorrida"}
+  ]
+}

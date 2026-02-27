@@ -2,18 +2,20 @@ package cmd
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	_ "modernc.org/sqlite"
 	"github.com/spf13/cobra"
+	_ "modernc.org/sqlite"
 )
 
 var (
 	reportRfc   string
 	reportQuery string
+	reportCsv   string
 )
 
 const defaultQuery = "SELECT * FROM cfdis ORDER BY fecha ASC;"
@@ -35,16 +37,18 @@ var reportCmd = &cobra.Command{
 			query = reportQuery
 		}
 
-		fmt.Printf("Ejecutando consulta: %s\n\n", query)
+		if reportCsv == "" {
+			fmt.Printf("Ejecutando consulta: %s\n\n", query)
+		}
 
-		err := runReport(dbPath, query)
+		err := runReport(dbPath, query, reportCsv)
 		if err != nil {
 			fmt.Printf("Error al generar el reporte: %v\n", err)
 		}
 	},
 }
 
-func runReport(dbPath, query string) error {
+func runReport(dbPath, query, csvPath string) error {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err
@@ -62,8 +66,23 @@ func runReport(dbPath, query string) error {
 		return err
 	}
 
-	// Imprimir encabezados
-	fmt.Println(strings.Join(columns, "|"))
+	var csvWriter *csv.Writer
+	var csvFile *os.File
+	if csvPath != "" {
+		csvFile, err = os.Create(csvPath)
+		if err != nil {
+			return fmt.Errorf("crear archivo csv: %w", err)
+		}
+		defer csvFile.Close()
+		csvWriter = csv.NewWriter(csvFile)
+		defer csvWriter.Flush()
+		if err := csvWriter.Write(columns); err != nil {
+			return err
+		}
+	} else {
+		// Imprimir encabezados a consola
+		fmt.Println(strings.Join(columns, "|"))
+	}
 
 	// Preparar para escanear
 	values := make([]interface{}, len(columns))
@@ -89,18 +108,29 @@ func runReport(dbPath, query string) error {
 			case int64:
 				rowStrings = append(rowStrings, fmt.Sprintf("%d", val))
 			case float64:
-				rowStrings = append(rowStrings, fmt.Sprintf("%f", val))
+				rowStrings = append(rowStrings, fmt.Sprintf("%v", val))
 			case nil:
-				rowStrings = append(rowStrings, "NULL")
+				rowStrings = append(rowStrings, "")
 			default:
 				rowStrings = append(rowStrings, fmt.Sprintf("%v", v))
 			}
 		}
-		fmt.Println(strings.Join(rowStrings, "|"))
+
+		if csvWriter != nil {
+			if err := csvWriter.Write(rowStrings); err != nil {
+				return err
+			}
+		} else {
+			fmt.Println(strings.Join(rowStrings, "|"))
+		}
 		rowCount++
 	}
 
-	fmt.Printf("\nTotal de registros: %d\n", rowCount)
+	if csvWriter != nil {
+		fmt.Printf("Reporte exportado exitosamente a %s (%d registros).\n", csvPath, rowCount)
+	} else {
+		fmt.Printf("\nTotal de registros: %d\n", rowCount)
+	}
 
 	return rows.Err()
 }
@@ -108,6 +138,7 @@ func runReport(dbPath, query string) error {
 func init() {
 	reportCmd.Flags().StringVar(&reportRfc, "rfc", "", "RFC del contribuyente")
 	reportCmd.Flags().StringVarP(&reportQuery, "query", "q", "", "Consulta SQL personalizada a ejecutar")
+	reportCmd.Flags().StringVar(&reportCsv, "csv", "", "Ruta del archivo CSV para exportar los resultados")
 	reportCmd.MarkFlagRequired("rfc")
 
 	rootCmd.AddCommand(reportCmd)
