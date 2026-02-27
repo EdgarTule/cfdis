@@ -436,19 +436,33 @@ func (s *SatService) SyncDatabase() error {
 
 	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		defaultCampos := `# CAMPOS GENERALES DE CFDI (INGRESOS, EGRESOS, TRASLADO)
+		defaultCampos := `# CAMPOS GENERALES DEL COMPROBANTE
 version TEXT //*[local-name()='Comprobante']/@Version
 serie TEXT //*[local-name()='Comprobante']/@Serie
 folio TEXT //*[local-name()='Comprobante']/@Folio
 fecha DATETIME //*[local-name()='Comprobante']/@Fecha
 forma_pago TEXT //*[local-name()='Comprobante']/@FormaPago
+no_certificado TEXT //*[local-name()='Comprobante']/@NoCertificado
+condiciones_pago TEXT //*[local-name()='Comprobante']/@CondicionesDePago
 subtotal DECIMAL(18,2) //*[local-name()='Comprobante']/@SubTotal
 descuento DECIMAL(18,2) //*[local-name()='Comprobante']/@Descuento
 moneda TEXT //*[local-name()='Comprobante']/@Moneda
+tipo_cambio DECIMAL(18,2) //*[local-name()='Comprobante']/@TipoCambio
 total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total
 tipo_comprobante TEXT //*[local-name()='Comprobante']/@TipoDeComprobante
+exportacion TEXT //*[local-name()='Comprobante']/@Exportacion
 metodo_pago TEXT //*[local-name()='Comprobante']/@MetodoPago
 lugar_expedicion TEXT //*[local-name()='Comprobante']/@LugarExpedicion
+confirmacion TEXT //*[local-name()='Comprobante']/@Confirmacion
+
+# INFORMACIÓN GLOBAL (CFDI 4.0)
+global_periodicidad TEXT //*[local-name()='InformacionGlobal']/@Periodicidad
+global_meses TEXT //*[local-name()='InformacionGlobal']/@Meses
+global_año TEXT //*[local-name()='InformacionGlobal']/@Año
+
+# CFDI RELACIONADOS (PRIMER REGISTRO)
+relacion_tipo TEXT //*[local-name()='CfdiRelacionados']/@TipoRelacion
+relacion_uuid TEXT //*[local-name()='CfdiRelacionado']/@UUID
 
 # EMISOR
 emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
@@ -458,30 +472,57 @@ emisor_regimen_fiscal TEXT //*[local-name()='Emisor']/@RegimenFiscal
 # RECEPTOR
 receptor_rfc TEXT //*[local-name()='Receptor']/@Rfc
 receptor_nombre TEXT //*[local-name()='Receptor']/@Nombre
+receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalReceptor
+receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
+# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
+concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
+concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
+concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
+concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
+
 # TIMBRE FISCAL DIGITAL (TFD)
+tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
 tfd_uuid TEXT //*[local-name()='TimbreFiscalDigital']/@UUID
 tfd_fecha_timbrado DATETIME //*[local-name()='TimbreFiscalDigital']/@FechaTimbrado
+tfd_rfc_prov_certif TEXT //*[local-name()='TimbreFiscalDigital']/@RfcProvCertif
+tfd_no_certificado_sat TEXT //*[local-name()='TimbreFiscalDigital']/@NoCertificadoSAT
 
-# IMPUESTOS
+# IMPUESTOS FEDERALES (TOTALES GENERALES)
 total_impuestos_retenidos DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosRetenidos
 total_impuestos_trasladados DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosTrasladados
-total_impuestos_locales_ret DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
-total_impuestos_locales_tras DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
-# COMPLEMENTO DE NOMINA
+# DESGLOSE DE IMPUESTOS FEDERALES (FILTRADO POR TIPO)
+iva_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='002']/@Importe
+iva_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='002']/@Importe
+isr_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='001']/@Importe
+ieps_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='003']/@Importe
+
+# IMPUESTOS LOCALES
+total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
+total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
+
+# COMPLEMENTO DE NOMINA (1.2)
+nomina_version TEXT //*[local-name()='Nomina']/@Version
 nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
 nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
 nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepciones
 nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
+nomina_receptor_num_empleado TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@NumEmpleado
+nomina_receptor_curp TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@Curp
 
-# COMPLEMENTO DE PAGO
+# COMPLEMENTO DE PAGO (RECIBO ELECTRÓNICO DE PAGOS 2.0)
+pagos_version TEXT //*[local-name()='Pagos']/@Version
 pagos_monto_total_pagos DECIMAL(18,2) //*[local-name()='Totales']/@MontoTotalPagos
+pagos_total_traslados_impuesto_iva_16 DECIMAL(18,2) //*[local-name()='Totales']/@TotalTrasladosImpuestoIVA16
 
-# COMPLEMENTO CARTA PORTE
+# COMPLEMENTO CARTA PORTE (2.0/3.0)
 cp_version TEXT //*[local-name()='CartaPorte']/@Version
-cp_transp_internac TEXT //*[local-name()='CartaPorte']/@TranspInternac`
+cp_transp_internac TEXT //*[local-name()='CartaPorte']/@TranspInternac
+cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistRecorrida`
 		if err := ioutil.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos por defecto: %w", err)
 		}
