@@ -436,10 +436,46 @@ func (s *SatService) SyncDatabase() error {
 
 	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
-		defaultCampos := `emisor_rfc CHAR(13) //*[local-name()='Emisor']/@Rfc
-receptor_rfc CHAR(13) //*[local-name()='Receptor']/@Rfc
+		defaultCampos := `# CAMPOS GENERALES DE CFDI (INGRESOS, EGRESOS, TRASLADO)
+version TEXT //*[local-name()='Comprobante']/@Version
+serie TEXT //*[local-name()='Comprobante']/@Serie
+folio TEXT //*[local-name()='Comprobante']/@Folio
 fecha DATETIME //*[local-name()='Comprobante']/@Fecha
-total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total`
+forma_pago TEXT //*[local-name()='Comprobante']/@FormaPago
+subtotal DECIMAL(18,2) //*[local-name()='Comprobante']/@SubTotal
+descuento DECIMAL(18,2) //*[local-name()='Comprobante']/@Descuento
+moneda TEXT //*[local-name()='Comprobante']/@Moneda
+total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total
+tipo_comprobante TEXT //*[local-name()='Comprobante']/@TipoDeComprobante
+metodo_pago TEXT //*[local-name()='Comprobante']/@MetodoPago
+lugar_expedicion TEXT //*[local-name()='Comprobante']/@LugarExpedicion
+
+# EMISOR
+emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
+emisor_nombre TEXT //*[local-name()='Emisor']/@Nombre
+emisor_regimen_fiscal TEXT //*[local-name()='Emisor']/@RegimenFiscal
+
+# RECEPTOR
+receptor_rfc TEXT //*[local-name()='Receptor']/@Rfc
+receptor_nombre TEXT //*[local-name()='Receptor']/@Nombre
+receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
+
+# TIMBRE FISCAL DIGITAL (TFD)
+tfd_uuid TEXT //*[local-name()='TimbreFiscalDigital']/@UUID
+tfd_fecha_timbrado DATETIME //*[local-name()='TimbreFiscalDigital']/@FechaTimbrado
+
+# COMPLEMENTO DE NOMINA
+nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
+nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
+nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepciones
+nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
+
+# COMPLEMENTO DE PAGO
+pagos_monto_total_pagos DECIMAL(18,2) //*[local-name()='Totales']/@MontoTotalPagos
+
+# COMPLEMENTO CARTA PORTE
+cp_version TEXT //*[local-name()='CartaPorte']/@Version
+cp_transp_internac TEXT //*[local-name()='CartaPorte']/@TranspInternac`
 		if err := ioutil.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos por defecto: %w", err)
 		}
