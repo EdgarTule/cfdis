@@ -35,6 +35,20 @@ tfd_fecha_timbrado DATETIME //*[local-name()='TimbreFiscalDigital']/@FechaTimbra
 tfd_rfc_prov_certif TEXT //*[local-name()='TimbreFiscalDigital']/@RfcProvCertif
 tfd_no_certificado_sat TEXT //*[local-name()='TimbreFiscalDigital']/@NoCertificadoSAT
 
+# IMPUESTOS FEDERALES (TOTALES)
+total_impuestos_retenidos DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosRetenidos
+total_impuestos_trasladados DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosTrasladados
+
+# DESGLOSE DE IMPUESTOS FEDERALES (PRINCIPALES)
+iva_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='002']/@Importe
+iva_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='002']/@Importe
+isr_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='001']/@Importe
+ieps_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='003']/@Importe
+
+# IMPUESTOS LOCALES (COMPLEMENTO)
+total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
+total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
+
 # COMPLEMENTO DE NOMINA
 nomina_version TEXT //*[local-name()='Nomina']/@Version
 nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina

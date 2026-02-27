@@ -464,6 +464,12 @@ receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 tfd_uuid TEXT //*[local-name()='TimbreFiscalDigital']/@UUID
 tfd_fecha_timbrado DATETIME //*[local-name()='TimbreFiscalDigital']/@FechaTimbrado
 
+# IMPUESTOS
+total_impuestos_retenidos DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosRetenidos
+total_impuestos_trasladados DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosTrasladados
+total_impuestos_locales_ret DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
+total_impuestos_locales_tras DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
+
 # COMPLEMENTO DE NOMINA
 nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
 nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
