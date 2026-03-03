@@ -595,7 +595,11 @@ func parseCamposFile(path string) ([]Campo, error) {
 	var campos []Campo
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		parts := strings.Fields(scanner.Text())
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.Fields(line)
 		if len(parts) < 3 {
 			continue
 		}
