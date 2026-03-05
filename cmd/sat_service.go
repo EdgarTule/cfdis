@@ -505,6 +505,14 @@ ieps_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='003']/@Imp
 total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
+# RETENCIONES E INFORMACIÓN DE PAGOS (v1.0 Y v2.0)
+reten_version TEXT //*[local-name()='Retenciones']/@Version
+reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
+reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
+reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
+reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper
+reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet
+
 # COMPLEMENTO DE NOMINA (1.2)
 nomina_version TEXT //*[local-name()='Nomina']/@Version
 nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
