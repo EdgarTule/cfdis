@@ -1,40 +1,18 @@
 {
   "comprobante": [
     {"nombre": "version", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Version"},
-    {"nombre": "serie", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Serie"},
-    {"nombre": "folio", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Folio"},
     {"nombre": "fecha", "tipo": "DATETIME", "xpath": "//*[local-name()='Comprobante']/@Fecha"},
-    {"nombre": "total", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@Total"},
-    {"nombre": "tipo_comprobante", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@TipoDeComprobante"}
+    {"nombre": "total", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@Total"}
   ],
   "retenciones": [
-    {"nombre": "reten_version", "tipo": "TEXT", "xpath": "//*[local-name()='Retenciones']/@Version"},
-    {"nombre": "reten_folio_int", "tipo": "TEXT", "xpath": "//*[local-name()='Retenciones']/@FolioInt"},
-    {"nombre": "reten_fecha_exp", "tipo": "DATETIME", "xpath": "//*[local-name()='Retenciones']/@FechaExp"},
-    {"nombre": "reten_cve_retenc", "tipo": "TEXT", "xpath": "//*[local-name()='Retenciones']/@CveRetenc"},
     {"nombre": "reten_total_operacion", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@montoTotOper"},
     {"nombre": "reten_total_retenido", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@montoTotRet"}
   ],
-  "emisor": [
-    {"nombre": "emisor_rfc", "tipo": "TEXT", "xpath": "//*[local-name()='Emisor']/@Rfc"},
-    {"nombre": "emisor_nombre", "tipo": "TEXT", "xpath": "//*[local-name()='Emisor']/@Nombre"}
-  ],
-  "receptor": [
-    {"nombre": "receptor_rfc", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@Rfc"},
-    {"nombre": "receptor_nombre", "tipo": "TEXT", "xpath": "//*[local-name()='Receptor']/@Nombre"}
-  ],
-  "impuestos": [
-    {"nombre": "total_impuestos_retenidos", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Impuestos']/@TotalImpuestosRetenidos"},
-    {"nombre": "total_impuestos_trasladados", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Impuestos']/@TotalImpuestosTrasladados"}
-  ],
   "nomina": [
-    {"nombre": "nomina_tipo_nomina", "tipo": "TEXT", "xpath": "//*[local-name()='Nomina']/@TipoNomina"},
-    {"nombre": "nomina_total_percepciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalPercepciones"}
-  ],
-  "pagos": [
-    {"nombre": "pagos_monto_total_pagos", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@MontoTotalPagos"}
-  ],
-  "carta_porte": [
-    {"nombre": "cp_version", "tipo": "TEXT", "xpath": "//*[local-name()='CartaPorte']/@Version"}
+    {"nombre": "nomina_total_percepciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalPercepciones"},
+    {"nombre": "nomina_total_deducciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalDeducciones"},
+    {"nombre": "nom_perc_sueldos_grav", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado"},
+    {"nombre": "nom_perc_sueldos_exen", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteExento"},
+    {"nombre": "nom_ded_isr", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe"}
   ]
 }

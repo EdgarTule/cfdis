@@ -521,6 +521,10 @@ nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepc
 nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
 nomina_receptor_num_empleado TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@NumEmpleado
 nomina_receptor_curp TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@Curp
+nom_perc_sueldos_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado
+nom_perc_sueldos_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteExento
+nom_ded_isr DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe
+nom_ded_seg_social DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='001']/@Importe
 
 # COMPLEMENTO DE PAGO (RECIBO ELECTRÓNICO DE PAGOS 2.0)
 pagos_version TEXT //*[local-name()='Pagos']/@Version

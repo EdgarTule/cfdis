@@ -97,14 +97,36 @@ reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVAR
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
 # ------------------------------------------------------------------------------
 
-# COMPLEMENTO DE NOMINA (1.2)
+# COMPLEMENTO DE NOMINA (1.2) - GENERAL
 nomina_version TEXT //*[local-name()='Nomina']/@Version
 nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
 nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
 nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepciones
 nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
+nomina_total_otros_pagos DECIMAL(18,2) //*[local-name()='Nomina']/@TotalOtrosPagos
 nomina_receptor_num_empleado TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@NumEmpleado
 nomina_receptor_curp TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@Curp
+
+# DESGLOSE DE PERCEPCIONES (POR CÓDIGO SAT)
+nom_perc_sueldos_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado
+nom_perc_sueldos_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteExento
+nom_perc_aguinaldo_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='002']/@ImporteGravado
+nom_perc_aguinaldo_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='002']/@ImporteExento
+nom_perc_ptu_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteGravado
+nom_perc_ptu_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteExento
+nom_perc_prima_vac_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteGravado
+nom_perc_prima_vac_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteExento
+nom_perc_prima_dom_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteGravado
+nom_perc_prima_dom_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteExento
+nom_perc_horas_ext_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteGravado
+nom_perc_horas_ext_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteExento
+
+# DESGLOSE DE DEDUCCIONES (POR CÓDIGO SAT)
+nom_ded_seg_social DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='001']/@Importe
+nom_ded_isr DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe
+nom_ded_infonavit DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='009']/@Importe
+nom_ded_prestamos DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='004']/@Importe
+nom_ded_cuota_sindical DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='005']/@Importe
 
 # COMPLEMENTO DE PAGO (RECIBO ELECTRÓNICO DE PAGOS 2.0)
 pagos_version TEXT //*[local-name()='Pagos']/@Version
