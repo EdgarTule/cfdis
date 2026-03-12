@@ -93,6 +93,12 @@ reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav
 reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet
 reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet
 
+# DESGLOSE DE RETENCIONES ESPECÍFICAS (PRIMER IMPUESTO RETENIDO)
+reten_imp_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
+reten_imp_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto
+reten_imp_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet
+reten_imp_tipo_pago TEXT //*[local-name()='ImpRetenidos'][1]/@TipoPagoRet
+
 # ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
 # ------------------------------------------------------------------------------

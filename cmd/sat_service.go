@@ -512,6 +512,9 @@ reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
 reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
 reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper
 reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet
+reten_imp_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
+reten_imp_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto
+reten_imp_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet
 
 # COMPLEMENTO DE NOMINA (1.2)
 nomina_version TEXT //*[local-name()='Nomina']/@Version

@@ -1,18 +1,19 @@
 {
   "comprobante": [
     {"nombre": "version", "tipo": "TEXT", "xpath": "//*[local-name()='Comprobante']/@Version"},
-    {"nombre": "fecha", "tipo": "DATETIME", "xpath": "//*[local-name()='Comprobante']/@Fecha"},
     {"nombre": "total", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Comprobante']/@Total"}
   ],
   "retenciones": [
+    {"nombre": "reten_version", "tipo": "TEXT", "xpath": "//*[local-name()='Retenciones']/@Version"},
+    {"nombre": "reten_cve_retenc", "tipo": "TEXT", "xpath": "//*[local-name()='Retenciones']/@CveRetenc"},
     {"nombre": "reten_total_operacion", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@montoTotOper"},
-    {"nombre": "reten_total_retenido", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@montoTotRet"}
+    {"nombre": "reten_total_retenido", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Totales']/@montoTotRet"},
+    {"nombre": "reten_imp_base", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='ImpRetenidos'][1]/@BaseRet"},
+    {"nombre": "reten_imp_impuesto", "tipo": "TEXT", "xpath": "//*[local-name()='ImpRetenidos'][1]/@Impuesto"},
+    {"nombre": "reten_imp_monto", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='ImpRetenidos'][1]/@montoRet"}
   ],
   "nomina": [
     {"nombre": "nomina_total_percepciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalPercepciones"},
-    {"nombre": "nomina_total_deducciones", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Nomina']/@TotalDeducciones"},
-    {"nombre": "nom_perc_sueldos_grav", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado"},
-    {"nombre": "nom_perc_sueldos_exen", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteExento"},
-    {"nombre": "nom_ded_isr", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe"}
+    {"nombre": "nom_perc_sueldos_grav", "tipo": "DECIMAL(18,2)", "xpath": "//*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado"}
   ]
 }
