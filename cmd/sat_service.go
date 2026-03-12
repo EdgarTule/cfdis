@@ -537,11 +537,21 @@ reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //
 reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
 reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
 
-# DESGLOSE DE RETENCIONES ESPECÍFICAS (PRIMER IMPUESTO RETENIDO)
-reten_imp_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
-reten_imp_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
-reten_imp_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
-reten_imp_tipo_pago TEXT //*[local-name()='ImpRetenidos'][1]/@TipoPagoRet
+# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
+reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
+reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
+reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
+reten_imp1_tipo_pago TEXT //*[local-name()='ImpRetenidos'][1]/@TipoPagoRet
+
+reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
+reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
+reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
+reten_imp2_tipo_pago TEXT //*[local-name()='ImpRetenidos'][2]/@TipoPagoRet
+
+reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
+reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
+reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
+reten_imp3_tipo_pago TEXT //*[local-name()='ImpRetenidos'][3]/@TipoPagoRet
 
 # ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
