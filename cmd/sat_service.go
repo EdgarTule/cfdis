@@ -511,30 +511,36 @@ total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@To
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
 # ------------------------------------------------------------------------------
-# RETENCIONES E INFORMACIÓN DE PAGOS (v1.0 Y v2.0)
+# ------------------------------------------------------------------------------
+# RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
 # ------------------------------------------------------------------------------
 reten_version TEXT //*[local-name()='Retenciones']/@Version
 reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
 reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
 reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
 reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
-reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RFCEmisor
-reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE
-reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep
-reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR
+
+# EMISOR Y RECEPTOR (RETENCIONES)
+reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
+reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
+reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcReceptor
+reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
+
+# PERIODO Y TOTALES
 reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
 reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
-reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc
-reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper
-reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent
-reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav
-reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet
-reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet
+reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
+
+reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
+reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
+reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
+reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
+reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
 
 # DESGLOSE DE RETENCIONES ESPECÍFICAS (PRIMER IMPUESTO RETENIDO)
 reten_imp_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
-reten_imp_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto
-reten_imp_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet
+reten_imp_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
+reten_imp_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
 reten_imp_tipo_pago TEXT //*[local-name()='ImpRetenidos'][1]/@TipoPagoRet
 
 # ------------------------------------------------------------------------------

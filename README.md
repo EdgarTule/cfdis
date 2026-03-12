@@ -116,5 +116,3 @@ Ejecuta una consulta sobre la base de datos SQLite. Puedes ver los resultados en
 # Exportar el resultado a un archivo CSV
 ./sat report --rfc TU_RFC_AQUI --csv reporte_enero.csv
 ```
-
-main
