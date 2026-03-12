@@ -437,7 +437,7 @@ func (s *SatService) SyncDatabase() error {
 	// Crear archivo de campos por defecto si no existe
 	if _, err := os.Stat(camposFile); os.IsNotExist(err) {
 		defaultCampos := `# ==============================================================================
-# GUÍA COMPLETA DE CAMPOS CFDI (3.3 Y 4.0) Y RETENCIONES (1.0 Y 2.0)
+# GUÍA DEFINITIVA DE CAMPOS CFDI (3.3 Y 4.0) Y RETENCIONES (1.0 Y 2.0)
 # Formato: nombre_columna TIPO_SQL XPath
 # ==============================================================================
 
@@ -511,7 +511,6 @@ total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@To
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
 # ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
 # RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
 # ------------------------------------------------------------------------------
 reten_version TEXT //*[local-name()='Retenciones']/@Version
@@ -523,6 +522,7 @@ reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
 # EMISOR Y RECEPTOR (RETENCIONES)
 reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
 reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
+# Receptor v1.0 usa nodo Nacional; v2.0 atributos directos
 reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcReceptor
 reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
 
@@ -541,17 +541,14 @@ reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVAR
 reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
 reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
 reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
-reten_imp1_tipo_pago TEXT //*[local-name()='ImpRetenidos'][1]/@TipoPagoRet
 
 reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
 reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
 reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-reten_imp2_tipo_pago TEXT //*[local-name()='ImpRetenidos'][2]/@TipoPagoRet
 
 reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
 reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
 reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
-reten_imp3_tipo_pago TEXT //*[local-name()='ImpRetenidos'][3]/@TipoPagoRet
 
 # ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
