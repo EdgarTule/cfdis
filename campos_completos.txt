@@ -82,10 +82,11 @@ reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
 reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
 
 # EMISOR Y RECEPTOR (RETENCIONES)
-reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
+# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
+reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
 reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
-# Receptor v1.0 usa nodo Nacional; v2.0 atributos directos
-reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcReceptor
+# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
+reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
 reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
 
 # PERIODO Y TOTALES
@@ -122,7 +123,7 @@ nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
 nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
 nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepciones
 nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
-nomina_total_otros_pagos DECIMAL(18,2) //*[local-name()/@TotalOtrosPagos
+nomina_total_otros_pagos DECIMAL(18,2) //*[local-name()='Nomina']/@TotalOtrosPagos
 nomina_receptor_num_empleado TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@NumEmpleado
 nomina_receptor_curp TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@Curp
 
