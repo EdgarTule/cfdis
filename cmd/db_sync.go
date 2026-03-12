@@ -15,7 +15,7 @@ var (
 var dbSyncCmd = &cobra.Command{
 	Use:   "db-sync",
 	Short: "Sincroniza los XML descargados a una base de datos SQLite.",
-	Long:  `Escanea el directorio de CFDI, parsea los XML y guarda los datos en una base de datos SQLite para futuras consultas y reportes.`,
+	Long:  `Escanea el directorio de CFDI y Retenciones, parsea los XML y guarda los datos en una base de datos SQLite para futuras consultas y reportes. Utiliza el archivo 'campos' para definir la estructura de la base de datos.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		homeDir, _ := os.UserHomeDir()
 		rfcDir := filepath.Join(homeDir, ".sat", dbSyncRfc)

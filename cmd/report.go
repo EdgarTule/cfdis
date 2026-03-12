@@ -22,8 +22,8 @@ const defaultQuery = "SELECT * FROM cfdis ORDER BY fecha ASC;"
 
 var reportCmd = &cobra.Command{
 	Use:   "report",
-	Short: "Genera un reporte desde la base de datos de CFDI.",
-	Long:  `Ejecuta una consulta en la base de datos SQLite y muestra los resultados. Se puede proporcionar una consulta personalizada.`,
+	Short: "Genera un reporte desde la base de datos de CFDI y Retenciones.",
+	Long:  `Ejecuta una consulta en la base de datos SQLite y muestra los resultados en consola o los exporta a un archivo CSV.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		homeDir, _ := os.UserHomeDir()
 		dbPath := filepath.Join(homeDir, ".sat", reportRfc, "sat.db")
