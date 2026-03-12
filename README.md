@@ -94,6 +94,14 @@ La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sa
 - **Flexibilidad:** Puedes añadir o quitar campos según tus necesidades.
 - **Referencia:** Consulta el archivo `campos_completos.txt` en la raíz de este repositorio para ver todos los XPaths disponibles.
 
+## Especificaciones Técnicas de XPath
+
+La aplicación utiliza el motor de XPath `antchfx/xpath`, que implementa:
+- **XPath 1.0:** Soporte completo para ejes, predicados y operadores.
+- **XPath 2.0 (Funciones Seleccionadas):** Incluye funciones extendidas como `lower-case()`, `ends-with()`, `matches()` (regex) y `replace()`.
+
+Se recomienda el uso de `local-name()` en las expresiones de los campos para garantizar la compatibilidad entre distintas versiones de CFDI y proveedores, evitando problemas con los prefijos de espacios de nombres (`cfdi:`, `tfd:`, etc.).
+
 ### 7. Generar un Reporte
 
 Ejecuta una consulta sobre la base de datos SQLite. Puedes ver los resultados en consola o exportarlos a CSV.
