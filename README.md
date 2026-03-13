@@ -9,8 +9,8 @@ La aplicación permite registrar RFCs, autenticarse, solicitar, verificar y desc
 
 - **Gestión por RFC:** Cada RFC registrado tiene su propio directorio de trabajo en `~/.sat/<RFC>/`, que contiene su configuración, token de autenticación y archivos descargados.
 - **Flujo de Descarga Completo:** Soporta todo el ciclo de vida de la descarga masiva: autenticación, solicitud, verificación y descarga.
-- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite. La estructura de la tabla se puede definir mediante un archivo `campos`.
-- **Reportes:** Permite ejecutar consultas SQL sobre la base de datos para generar reportes.
+- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite. La estructura de la tabla se puede definir mediante un archivo `campos`. Soporta **CFDI (3.3 y 4.0)** y **Retenciones (1.0 y 2.0)**, incluyendo impuestos, desgloses de nómina y complementos.
+- **Reportes y Exportación:** Permite ejecutar consultas SQL sobre la base de datos para generar reportes en consola o exportarlos directamente a archivos **CSV**.
 
 ## Instalación
 
@@ -87,11 +87,24 @@ Escanea los XML descargados y guarda sus metadatos en una base de datos SQLite (
 ```bash
 ./sat db-sync --rfc TU_RFC_AQUI
 ```
-La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sat/<RFC>/campos`. Puedes editar este archivo para personalizar los campos que se extraen de los XML.
+La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sat/<RFC>/campos` con una lista exhaustiva de campos (Impuestos, desgloses de Nómina, Pagos, Carta Porte y Retenciones).
+
+**Características del archivo `campos`:**
+- **Comentarios:** Puedes usar `#` para agregar comentarios u organizar tus campos.
+- **Flexibilidad:** Puedes añadir o quitar campos según tus necesidades.
+- **Referencia:** Consulta el archivo `campos_completos.txt` en la raíz de este repositorio para ver todos los XPaths disponibles.
+
+## Especificaciones Técnicas de XPath
+
+La aplicación utiliza el motor de XPath `antchfx/xpath`, que implementa:
+- **XPath 1.0:** Soporte completo para ejes, predicados y operadores.
+- **XPath 2.0 (Funciones Seleccionadas):** Incluye funciones extendidas como `lower-case()`, `ends-with()`, `matches()` (regex) y `replace()`.
+
+Se recomienda el uso de `local-name()` en las expresiones de los campos para garantizar la compatibilidad entre distintas versiones de CFDI y proveedores, evitando problemas con los prefijos de espacios de nombres (`cfdi:`, `tfd:`, etc.).
 
 ### 7. Generar un Reporte
 
-Ejecuta una consulta sobre la base de datos SQLite.
+Ejecuta una consulta sobre la base de datos SQLite. Puedes ver los resultados en consola o exportarlos a CSV.
 
 ```bash
 # Ejecutar una consulta por defecto (SELECT * FROM cfdis)
@@ -99,6 +112,7 @@ Ejecuta una consulta sobre la base de datos SQLite.
 
 # Ejecutar una consulta personalizada
 ./sat report --rfc TU_RFC_AQUI -q "SELECT uuid, fecha, total FROM cfdis WHERE total > 1000;"
-```
 
-main
+# Exportar el resultado a un archivo CSV
+./sat report --rfc TU_RFC_AQUI --csv reporte_enero.csv
+```

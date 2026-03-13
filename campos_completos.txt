@@ -1,0 +1,159 @@
+# ==============================================================================
+# GUÍA DEFINITIVA DE CAMPOS CFDI (3.3 Y 4.0) Y RETENCIONES (1.0 Y 2.0)
+# Formato: nombre_columna TIPO_SQL XPath
+# ==============================================================================
+
+# CAMPOS GENERALES DEL COMPROBANTE (CFDI)
+version TEXT //*[local-name()='Comprobante']/@Version
+serie TEXT //*[local-name()='Comprobante']/@Serie
+folio TEXT //*[local-name()='Comprobante']/@Folio
+fecha DATETIME //*[local-name()='Comprobante']/@Fecha
+forma_pago TEXT //*[local-name()='Comprobante']/@FormaPago
+no_certificado TEXT //*[local-name()='Comprobante']/@NoCertificado
+condiciones_pago TEXT //*[local-name()='Comprobante']/@CondicionesDePago
+subtotal DECIMAL(18,2) //*[local-name()='Comprobante']/@SubTotal
+descuento DECIMAL(18,2) //*[local-name()='Comprobante']/@Descuento
+moneda TEXT //*[local-name()='Comprobante']/@Moneda
+tipo_cambio DECIMAL(18,2) //*[local-name()='Comprobante']/@TipoCambio
+total DECIMAL(18,2) //*[local-name()='Comprobante']/@Total
+tipo_comprobante TEXT //*[local-name()='Comprobante']/@TipoDeComprobante
+exportacion TEXT //*[local-name()='Comprobante']/@Exportacion
+metodo_pago TEXT //*[local-name()='Comprobante']/@MetodoPago
+lugar_expedicion TEXT //*[local-name()='Comprobante']/@LugarExpedicion
+confirmacion TEXT //*[local-name()='Comprobante']/@Confirmacion
+
+# INFORMACIÓN GLOBAL (CFDI 4.0)
+global_periodicidad TEXT //*[local-name()='InformacionGlobal']/@Periodicidad
+global_meses TEXT //*[local-name()='InformacionGlobal']/@Meses
+global_año TEXT //*[local-name()='InformacionGlobal']/@Año
+
+# CFDI RELACIONADOS (PRIMER REGISTRO)
+relacion_tipo TEXT //*[local-name()='CfdiRelacionados']/@TipoRelacion
+relacion_uuid TEXT //*[local-name()='CfdiRelacionado']/@UUID
+
+# EMISOR (CFDI)
+emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
+emisor_nombre TEXT //*[local-name()='Emisor']/@Nombre
+emisor_regimen_fiscal TEXT //*[local-name()='Emisor']/@RegimenFiscal
+
+# RECEPTOR (CFDI)
+receptor_rfc TEXT //*[local-name()='Receptor']/@Rfc
+receptor_nombre TEXT //*[local-name()='Receptor']/@Nombre
+receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalReceptor
+receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
+receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
+
+# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
+concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
+concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
+concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
+concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
+
+# TIMBRE FISCAL DIGITAL (TFD)
+tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
+tfd_uuid TEXT //*[local-name()='TimbreFiscalDigital']/@UUID
+tfd_fecha_timbrado DATETIME //*[local-name()='TimbreFiscalDigital']/@FechaTimbrado
+tfd_rfc_prov_certif TEXT //*[local-name()='TimbreFiscalDigital']/@RfcProvCertif
+tfd_no_certificado_sat TEXT //*[local-name()='TimbreFiscalDigital']/@NoCertificadoSAT
+
+# IMPUESTOS FEDERALES (TOTALES GENERALES)
+total_impuestos_retenidos DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosRetenidos
+total_impuestos_trasladados DECIMAL(18,2) //*[local-name()='Impuestos']/@TotalImpuestosTrasladados
+
+# DESGLOSE DE IMPUESTOS FEDERALES (FILTRADO POR TIPO)
+iva_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='002']/@Importe
+iva_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='002']/@Importe
+isr_retenido DECIMAL(18,2) //*[local-name()='Retencion'][@Impuesto='001']/@Importe
+ieps_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='003']/@Importe
+
+# IMPUESTOS LOCALES
+total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
+total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
+
+# ------------------------------------------------------------------------------
+# RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
+# ------------------------------------------------------------------------------
+reten_version TEXT //*[local-name()='Retenciones']/@Version
+reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
+reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
+reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
+reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
+
+# EMISOR Y RECEPTOR (RETENCIONES)
+# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
+reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
+reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
+# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
+reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
+reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
+
+# PERIODO Y TOTALES
+reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
+reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
+reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
+
+reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
+reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
+reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
+reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
+reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
+
+# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
+reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
+reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
+reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
+
+reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
+reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
+reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
+
+reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
+reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
+reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
+
+# ------------------------------------------------------------------------------
+# COMPLEMENTOS ESPECÍFICOS (CFDI)
+# ------------------------------------------------------------------------------
+
+# COMPLEMENTO DE NOMINA (1.2) - GENERAL
+nomina_version TEXT //*[local-name()='Nomina']/@Version
+nomina_tipo_nomina TEXT //*[local-name()='Nomina']/@TipoNomina
+nomina_fecha_pago TEXT //*[local-name()='Nomina']/@FechaPago
+nomina_total_percepciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalPercepciones
+nomina_total_deducciones DECIMAL(18,2) //*[local-name()='Nomina']/@TotalDeducciones
+nomina_total_otros_pagos DECIMAL(18,2) //*[local-name()='Nomina']/@TotalOtrosPagos
+nomina_receptor_num_empleado TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@NumEmpleado
+nomina_receptor_curp TEXT //*[local-name()='Nomina']/*[local-name()='Receptor']/@Curp
+
+# DESGLOSE DE PERCEPCIONES (POR CÓDIGO SAT)
+nom_perc_sueldos_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteGravado
+nom_perc_sueldos_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='001']/@ImporteExento
+nom_perc_aguinaldo_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='002']/@ImporteGravado
+nom_perc_aguinaldo_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='002']/@ImporteExento
+nom_perc_ptu_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteGravado
+nom_perc_ptu_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteExento
+nom_perc_prima_vac_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteGravado
+nom_perc_prima_vac_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteExento
+nom_perc_prima_dom_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteGravado
+nom_perc_prima_dom_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteExento
+nom_perc_horas_ext_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteGravado
+nom_perc_horas_ext_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteExento
+
+# DESGLOSE DE DEDUCCIONES (POR CÓDIGO SAT)
+nom_ded_seg_social DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='001']/@Importe
+nom_ded_isr DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe
+nom_ded_infonavit DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='009']/@Importe
+nom_ded_prestamos DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='004']/@Importe
+nom_ded_cuota_sindical DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='005']/@Importe
+
+# COMPLEMENTO DE PAGO (RECIBO ELECTRÓNICO DE PAGOS 2.0)
+pagos_version TEXT //*[local-name()='Pagos']/@Version
+pagos_monto_total_pagos DECIMAL(18,2) //*[local-name()='Totales']/@MontoTotalPagos
+pagos_total_traslados_impuesto_iva_16 DECIMAL(18,2) //*[local-name()='Totales']/@TotalTrasladosImpuestoIVA16
+
+# COMPLEMENTO CARTA PORTE (2.0/3.0)
+cp_version TEXT //*[local-name()='CartaPorte']/@Version
+cp_transp_internac TEXT //*[local-name()='CartaPorte']/@TranspInternac
+cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistRecorrida
