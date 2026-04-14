@@ -53,9 +53,9 @@ func runReportWithType(tipo string) {
 	query := reportQuery
 	if query == "" {
 		if tipo == "cfdi" {
-			query = "SELECT * FROM cfdis WHERE tipo = 'cfdi' ORDER BY fecha ASC;"
+			query = "SELECT * FROM cfdis ORDER BY fecha ASC;"
 		} else {
-			query = "SELECT * FROM cfdis WHERE tipo = 'retenciones' ORDER BY reten_fecha_exp ASC;"
+			query = "SELECT * FROM retenciones ORDER BY reten_fecha_exp ASC;"
 		}
 	}
 
@@ -87,20 +87,6 @@ func runReport(dbPath, query, csvPath, tipo string) error {
 		return err
 	}
 
-	// Filtrar columnas según el tipo
-	var filteredIndices []int
-	var filteredColumns []string
-	for i, col := range columns {
-		if tipo == "cfdi" && strings.HasPrefix(col, "reten_") {
-			continue
-		}
-		if tipo == "retenciones" && !strings.HasPrefix(col, "reten_") && col != "uuid" && col != "xml_path" && col != "tipo" && col != "id" {
-			continue
-		}
-		filteredIndices = append(filteredIndices, i)
-		filteredColumns = append(filteredColumns, col)
-	}
-
 	var csvWriter *csv.Writer
 	var csvFile *os.File
 	if csvPath != "" {
@@ -111,12 +97,12 @@ func runReport(dbPath, query, csvPath, tipo string) error {
 		defer csvFile.Close()
 		csvWriter = csv.NewWriter(csvFile)
 		defer csvWriter.Flush()
-		if err := csvWriter.Write(filteredColumns); err != nil {
+		if err := csvWriter.Write(columns); err != nil {
 			return err
 		}
 	} else {
 		// Imprimir encabezados a consola
-		fmt.Println(strings.Join(filteredColumns, "|"))
+		fmt.Println(strings.Join(columns, "|"))
 	}
 
 	// Preparar para escanear
@@ -134,8 +120,7 @@ func runReport(dbPath, query, csvPath, tipo string) error {
 		}
 
 		var rowStrings []string
-		for _, idx := range filteredIndices {
-			v := values[idx]
+		for _, v := range values {
 			switch val := v.(type) {
 			case []byte:
 				rowStrings = append(rowStrings, string(val))

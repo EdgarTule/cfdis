@@ -9,7 +9,7 @@ La aplicación permite registrar RFCs, autenticarse, solicitar, verificar y desc
 
 - **Gestión por RFC:** Cada RFC registrado tiene su propio directorio de trabajo en `~/.sat/<RFC>/`, que contiene su configuración, token de autenticación y archivos descargados.
 - **Flujo de Descarga Completo:** Soporta todo el ciclo de vida de la descarga masiva: autenticación, solicitud, verificación y descarga.
-- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite. La estructura de la tabla se puede definir mediante un archivo `campos`. Soporta **CFDI (3.3 y 4.0)** y **Retenciones (1.0 y 2.0)**, incluyendo impuestos, desgloses de nómina y complementos.
+- **Base de Datos Personalizable:** Sincroniza los metadatos de los archivos XML descargados a una base de datos SQLite con tablas separadas para **CFDI** y **Retenciones**. La estructura de las tablas se puede definir mediante archivos de configuración (`campos` y `campos_retenciones`). Soporta **CFDI (3.3 y 4.0)** y **Retenciones (1.0 y 2.0)**, incluyendo impuestos, desgloses de nómina y complementos.
 - **Reportes y Exportación:** Permite ejecutar consultas SQL sobre la base de datos para generar reportes en consola o exportarlos directamente a archivos **CSV**.
 
 ## Instalación
@@ -82,14 +82,18 @@ Descarga los paquetes que ya han sido procesados por el SAT. Los archivos XML se
 
 ### 6. Sincronizar la Base de Datos
 
-Escanea los XML descargados y guarda sus metadatos en una base de datos SQLite (`~/.sat/<RFC>/sat.db`).
+Escanea los XML descargados y guarda sus metadatos en una base de datos SQLite (`~/.sat/<RFC>/sat.db`). Los datos se dividen automáticamente en dos tablas: `cfdis` y `retenciones`.
 
 ```bash
 ./sat db-sync --rfc TU_RFC_AQUI
 ```
-La primera vez que se ejecuta, creará un archivo `campos` por defecto en `~/.sat/<RFC>/campos` con una lista exhaustiva de campos (Impuestos, desgloses de Nómina, Pagos, Carta Porte y Retenciones).
+La primera vez que se ejecuta, se crearán dos archivos de configuración en `~/.sat/<RFC>/`:
+- `campos`: Para configurar la extracción de CFDIs estándar (Facturas, Nómina, Pagos).
+- `campos_retenciones`: Para configurar la extracción de comprobantes de Retenciones e Información de Pagos.
 
-**Características del archivo `campos`:**
+Ambas tablas incluyen una columna automática `subtipo` que indica si el comprobante es **emitido** o **recibido**.
+
+**Características de los archivos de campos:**
 - **Comentarios:** Puedes usar `#` para agregar comentarios u organizar tus campos.
 - **Flexibilidad:** Puedes añadir o quitar campos según tus necesidades.
 - **Referencia:** Consulta el archivo `campos_completos.txt` en la raíz de este repositorio para ver todos los XPaths disponibles.
@@ -104,28 +108,31 @@ Se recomienda el uso de `local-name()` en las expresiones de los campos para gar
 
 ### 7. Generar un Reporte
 
-El comando `report` se divide en dos subcomandos para separar los reportes de CFDIs normales de los de Retenciones. Cada uno aplica filtros automáticos en la base de datos y oculta las columnas que no son relevantes para ese tipo de comprobante.
+El comando `report` se divide en dos subcomandos para acceder a las tablas correspondientes.
 
 #### Reporte de CFDIs Normales
-Muestra los comprobantes estándar y oculta las columnas relacionadas con Retenciones (prefijo `reten_`).
+Consulta la tabla `cfdis`.
 
 ```bash
 # Ejecutar consulta por defecto para CFDIs
 ./sat report cfdi --rfc TU_RFC_AQUI
+
+# Filtrar por subtipo (emitidos/recibidos)
+./sat report cfdi --rfc TU_RFC_AQUI -q "SELECT * FROM cfdis WHERE subtipo = 'emitido';"
 
 # Exportar a CSV
 ./sat report cfdi --rfc TU_RFC_AQUI --csv reporte_facturas.csv
 ```
 
 #### Reporte de Retenciones
-Muestra los comprobantes de Retenciones e Información de Pagos, ocultando las columnas de CFDI normal para centrarse en los datos de retención.
+Consulta la tabla `retenciones`.
 
 ```bash
 # Ejecutar consulta por defecto para Retenciones
 ./sat report retenciones --rfc TU_RFC_AQUI
 
 # Consulta personalizada filtrando por ejercicio
-./sat report retenciones --rfc TU_RFC_AQUI -q "SELECT * FROM cfdis WHERE reten_periodo_ejercicio = 2023;"
+./sat report retenciones --rfc TU_RFC_AQUI -q "SELECT * FROM retenciones WHERE reten_periodo_ejercicio = 2023;"
 ```
 
 #### Flags Globales de Reporte
