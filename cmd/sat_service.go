@@ -796,9 +796,16 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, rete
 	values[1] = xmlPath
 	values[2] = subtipo
 	for i, campo := range campos {
-		node := xmlquery.FindOne(doc, campo.XPath)
-		if node != nil {
-			values[i+3] = node.InnerText()
+		nodes := xmlquery.Find(doc, campo.XPath)
+		if len(nodes) > 0 {
+			var sb strings.Builder
+			for j, node := range nodes {
+				sb.WriteString(node.InnerText())
+				if j < len(nodes)-1 {
+					sb.WriteString(" | ")
+				}
+			}
+			values[i+3] = sb.String()
 		} else {
 			values[i+3] = nil
 		}
