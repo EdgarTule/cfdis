@@ -1,5 +1,5 @@
 # ==============================================================================
-# GUÍA DEFINITIVA DE CAMPOS CFDI (3.3 Y 4.0) Y RETENCIONES (1.0 Y 2.0)
+# GUÍA DE REFERENCIA DE CAMPOS CFDI (3.3 Y 4.0)
 # Formato: nombre_columna TIPO_SQL XPath
 # ==============================================================================
 
@@ -73,47 +73,6 @@ total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@To
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
 # ------------------------------------------------------------------------------
-# RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
-# ------------------------------------------------------------------------------
-reten_version TEXT //*[local-name()='Retenciones']/@Version
-reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
-reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
-reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
-reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
-
-# EMISOR Y RECEPTOR (RETENCIONES)
-# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
-reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
-reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
-# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
-reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
-reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
-
-# PERIODO Y TOTALES
-reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
-reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
-reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
-
-reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
-reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
-reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
-reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
-reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
-
-# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
-reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
-reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
-reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
-
-reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
-reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
-reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-
-reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
-reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
-reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
-
-# ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
 # ------------------------------------------------------------------------------
 
@@ -134,19 +93,6 @@ nom_perc_aguinaldo_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercep
 nom_perc_aguinaldo_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='002']/@ImporteExento
 nom_perc_ptu_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteGravado
 nom_perc_ptu_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='003']/@ImporteExento
-nom_perc_prima_vac_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteGravado
-nom_perc_prima_vac_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='022']/@ImporteExento
-nom_perc_prima_dom_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteGravado
-nom_perc_prima_dom_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='023']/@ImporteExento
-nom_perc_horas_ext_grav DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteGravado
-nom_perc_horas_ext_exen DECIMAL(18,2) //*[local-name()='Percepcion'][@TipoPercepcion='019']/@ImporteExento
-
-# DESGLOSE DE DEDUCCIONES (POR CÓDIGO SAT)
-nom_ded_seg_social DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='001']/@Importe
-nom_ded_isr DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='002']/@Importe
-nom_ded_infonavit DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='009']/@Importe
-nom_ded_prestamos DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='004']/@Importe
-nom_ded_cuota_sindical DECIMAL(18,2) //*[local-name()='Deduccion'][@TipoDeduccion='005']/@Importe
 
 # COMPLEMENTO DE PAGO (RECIBO ELECTRÓNICO DE PAGOS 2.0)
 pagos_version TEXT //*[local-name()='Pagos']/@Version

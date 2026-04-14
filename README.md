@@ -96,7 +96,7 @@ Ambas tablas incluyen una columna automática `subtipo` que indica si el comprob
 **Características de los archivos de campos:**
 - **Comentarios:** Puedes usar `#` para agregar comentarios u organizar tus campos.
 - **Flexibilidad:** Puedes añadir o quitar campos según tus necesidades.
-- **Referencia:** Consulta el archivo `campos_completos.txt` en la raíz de este repositorio para ver todos los XPaths disponibles.
+- **Referencia:** Consulta los archivos `campos_cfdi_referencia.txt` y `campos_reten_referencia.txt` en la raíz de este repositorio para ver todos los XPaths disponibles para cada tipo de reporte.
 
 ## Especificaciones Técnicas de XPath
 
