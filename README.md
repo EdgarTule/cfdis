@@ -104,15 +104,31 @@ Se recomienda el uso de `local-name()` en las expresiones de los campos para gar
 
 ### 7. Generar un Reporte
 
-Ejecuta una consulta sobre la base de datos SQLite. Puedes ver los resultados en consola o exportarlos a CSV.
+El comando `report` se divide en dos subcomandos para separar los reportes de CFDIs normales de los de Retenciones. Cada uno aplica filtros automáticos en la base de datos y oculta las columnas que no son relevantes para ese tipo de comprobante.
+
+#### Reporte de CFDIs Normales
+Muestra los comprobantes estándar y oculta las columnas relacionadas con Retenciones (prefijo `reten_`).
 
 ```bash
-# Ejecutar una consulta por defecto (SELECT * FROM cfdis)
-./sat report --rfc TU_RFC_AQUI
+# Ejecutar consulta por defecto para CFDIs
+./sat report cfdi --rfc TU_RFC_AQUI
 
-# Ejecutar una consulta personalizada
-./sat report --rfc TU_RFC_AQUI -q "SELECT uuid, fecha, total FROM cfdis WHERE total > 1000;"
-
-# Exportar el resultado a un archivo CSV
-./sat report --rfc TU_RFC_AQUI --csv reporte_enero.csv
+# Exportar a CSV
+./sat report cfdi --rfc TU_RFC_AQUI --csv reporte_facturas.csv
 ```
+
+#### Reporte de Retenciones
+Muestra los comprobantes de Retenciones e Información de Pagos, ocultando las columnas de CFDI normal para centrarse en los datos de retención.
+
+```bash
+# Ejecutar consulta por defecto para Retenciones
+./sat report retenciones --rfc TU_RFC_AQUI
+
+# Consulta personalizada filtrando por ejercicio
+./sat report retenciones --rfc TU_RFC_AQUI -q "SELECT * FROM cfdis WHERE reten_periodo_ejercicio = 2023;"
+```
+
+#### Flags Globales de Reporte
+- `--rfc`: (Obligatorio) RFC del contribuyente.
+- `-q, --query`: Consulta SQL personalizada. Aunque se use una consulta personalizada, el comando seguirá filtrando las columnas visibles según el subcomando elegido (`cfdi` o `retenciones`).
+- `--csv`: Ruta del archivo para exportar los resultados.
