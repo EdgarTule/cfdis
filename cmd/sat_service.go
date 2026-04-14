@@ -633,6 +633,9 @@ cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistR
 		return err
 	}
 
+	// Asegurar que la columna 'tipo' exista para retrocompatibilidad
+	_, _ = db.Exec("ALTER TABLE cfdis ADD COLUMN tipo TEXT")
+
 	cfdiDir := filepath.Join(s.rfcDir, "cfdis")
 	files, err := ioutil.ReadDir(cfdiDir)
 	if err != nil {
@@ -686,7 +689,7 @@ func parseCamposFile(path string) ([]Campo, error) {
 
 func createTable(db *sql.DB, campos []Campo) error {
 	var sb strings.Builder
-	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, ")
+	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, tipo TEXT, ")
 	for i, campo := range campos {
 		sb.WriteString(fmt.Sprintf("%s %s", campo.Nombre, campo.Tipo))
 		if i < len(campos)-1 {
@@ -727,21 +730,28 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 	}
 	fmt.Printf("Insertando XML en la DB: %s\n", filepath.Base(xmlPath))
 
-	values := make([]interface{}, len(campos)+2)
+	// Determinar el tipo de comprobante
+	tipo := "cfdi"
+	if xmlquery.FindOne(doc, "//*[local-name()='Retenciones']") != nil {
+		tipo = "retenciones"
+	}
+
+	values := make([]interface{}, len(campos)+3)
 	values[0] = uuid
 	values[1] = xmlPath
+	values[2] = tipo
 	for i, campo := range campos {
 		node := xmlquery.FindOne(doc, campo.XPath)
 		if node != nil {
-			values[i+2] = node.InnerText()
+			values[i+3] = node.InnerText()
 		} else {
-			values[i+2] = nil
+			values[i+3] = nil
 		}
 	}
 
 	var cols, placeholders strings.Builder
-	cols.WriteString("uuid, xml_path")
-	placeholders.WriteString("?, ?")
+	cols.WriteString("uuid, xml_path, tipo")
+	placeholders.WriteString("?, ?, ?")
 	for _, campo := range campos {
 		cols.WriteString(", " + campo.Nombre)
 		placeholders.WriteString(", ?")

@@ -24,31 +24,52 @@ var reportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "Genera un reporte desde la base de datos de CFDI y Retenciones.",
 	Long:  `Ejecuta una consulta en la base de datos SQLite y muestra los resultados en consola o los exporta a un archivo CSV.`,
+}
+
+var reportCfdiCmd = &cobra.Command{
+	Use:   "cfdi",
+	Short: "Genera un reporte de CFDIs normales.",
 	Run: func(cmd *cobra.Command, args []string) {
-		homeDir, _ := os.UserHomeDir()
-		dbPath := filepath.Join(homeDir, ".sat", reportRfc, "sat.db")
-		if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-			fmt.Printf("Error: No se encontró la base de datos para el RFC %s. Ejecute 'db-sync' primero.\n", reportRfc)
-			return
-		}
-
-		query := defaultQuery
-		if reportQuery != "" {
-			query = reportQuery
-		}
-
-		if reportCsv == "" {
-			fmt.Printf("Ejecutando consulta: %s\n\n", query)
-		}
-
-		err := runReport(dbPath, query, reportCsv)
-		if err != nil {
-			fmt.Printf("Error al generar el reporte: %v\n", err)
-		}
+		runReportWithType("cfdi")
 	},
 }
 
-func runReport(dbPath, query, csvPath string) error {
+var reportRetencionesCmd = &cobra.Command{
+	Use:   "retenciones",
+	Short: "Genera un reporte de Retenciones.",
+	Run: func(cmd *cobra.Command, args []string) {
+		runReportWithType("retenciones")
+	},
+}
+
+func runReportWithType(tipo string) {
+	homeDir, _ := os.UserHomeDir()
+	dbPath := filepath.Join(homeDir, ".sat", reportRfc, "sat.db")
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		fmt.Printf("Error: No se encontró la base de datos para el RFC %s. Ejecute 'db-sync' primero.\n", reportRfc)
+		return
+	}
+
+	query := reportQuery
+	if query == "" {
+		if tipo == "cfdi" {
+			query = "SELECT * FROM cfdis WHERE tipo = 'cfdi' ORDER BY fecha ASC;"
+		} else {
+			query = "SELECT * FROM cfdis WHERE tipo = 'retenciones' ORDER BY reten_fecha_exp ASC;"
+		}
+	}
+
+	if reportCsv == "" {
+		fmt.Printf("Ejecutando consulta: %s\n\n", query)
+	}
+
+	err := runReport(dbPath, query, reportCsv, tipo)
+	if err != nil {
+		fmt.Printf("Error al generar el reporte: %v\n", err)
+	}
+}
+
+func runReport(dbPath, query, csvPath, tipo string) error {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err
@@ -66,6 +87,20 @@ func runReport(dbPath, query, csvPath string) error {
 		return err
 	}
 
+	// Filtrar columnas según el tipo
+	var filteredIndices []int
+	var filteredColumns []string
+	for i, col := range columns {
+		if tipo == "cfdi" && strings.HasPrefix(col, "reten_") {
+			continue
+		}
+		if tipo == "retenciones" && !strings.HasPrefix(col, "reten_") && col != "uuid" && col != "xml_path" && col != "tipo" && col != "id" {
+			continue
+		}
+		filteredIndices = append(filteredIndices, i)
+		filteredColumns = append(filteredColumns, col)
+	}
+
 	var csvWriter *csv.Writer
 	var csvFile *os.File
 	if csvPath != "" {
@@ -76,12 +111,12 @@ func runReport(dbPath, query, csvPath string) error {
 		defer csvFile.Close()
 		csvWriter = csv.NewWriter(csvFile)
 		defer csvWriter.Flush()
-		if err := csvWriter.Write(columns); err != nil {
+		if err := csvWriter.Write(filteredColumns); err != nil {
 			return err
 		}
 	} else {
 		// Imprimir encabezados a consola
-		fmt.Println(strings.Join(columns, "|"))
+		fmt.Println(strings.Join(filteredColumns, "|"))
 	}
 
 	// Preparar para escanear
@@ -99,7 +134,8 @@ func runReport(dbPath, query, csvPath string) error {
 		}
 
 		var rowStrings []string
-		for _, v := range values {
+		for _, idx := range filteredIndices {
+			v := values[idx]
 			switch val := v.(type) {
 			case []byte:
 				rowStrings = append(rowStrings, string(val))
@@ -136,10 +172,13 @@ func runReport(dbPath, query, csvPath string) error {
 }
 
 func init() {
-	reportCmd.Flags().StringVar(&reportRfc, "rfc", "", "RFC del contribuyente")
-	reportCmd.Flags().StringVarP(&reportQuery, "query", "q", "", "Consulta SQL personalizada a ejecutar")
-	reportCmd.Flags().StringVar(&reportCsv, "csv", "", "Ruta del archivo CSV para exportar los resultados")
-	reportCmd.MarkFlagRequired("rfc")
+	reportCmd.PersistentFlags().StringVar(&reportRfc, "rfc", "", "RFC del contribuyente")
+	reportCmd.PersistentFlags().StringVarP(&reportQuery, "query", "q", "", "Consulta SQL personalizada a ejecutar")
+	reportCmd.PersistentFlags().StringVar(&reportCsv, "csv", "", "Ruta del archivo CSV para exportar los resultados")
+	reportCmd.MarkPersistentFlagRequired("rfc")
+
+	reportCmd.AddCommand(reportCfdiCmd)
+	reportCmd.AddCommand(reportRetencionesCmd)
 
 	rootCmd.AddCommand(reportCmd)
 }
