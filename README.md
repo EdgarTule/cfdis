@@ -14,10 +14,16 @@ La aplicación permite registrar RFCs, autenticarse, solicitar, verificar y desc
 
 ## Instalación
 
-Para compilar la aplicación desde la fuente, clona el repositorio y ejecuta el siguiente comando. Esto creará un ejecutable llamado `sat` en el directorio actual.
+Para compilar la aplicación desde la fuente, clona el repositorio y ejecuta el siguiente comando.
 
+**En Linux/macOS:**
 ```bash
 go build -o sat .
+```
+
+**En Windows (CMD o PowerShell):**
+```batch
+go build -o sat.exe .
 ```
 
 ## Uso

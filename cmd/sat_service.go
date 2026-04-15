@@ -754,7 +754,7 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, rete
 	tableName := "cfdis"
 	campos := cfdiCampos
 	isReten := false
-	if xmlquery.FindOne(doc, "//*[local-name()='Retenciones']") != nil {
+	if xmlquery.FindOne(doc, "/*[local-name()='Retenciones']") != nil {
 		tableName = "retenciones"
 		campos = retenCampos
 		isReten = true
