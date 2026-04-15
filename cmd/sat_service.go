@@ -642,6 +642,7 @@ reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | /
 	camposBytes, _ := ioutil.ReadFile(camposFile)
 	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
 	allCamposBytes := append(camposBytes, camposRetenBytes...)
+	allCamposBytes = append(allCamposBytes, []byte("v2")...) // Forzar re-sync por cambio de lógica de detección
 
 	currentHash := md5.Sum(allCamposBytes)
 	currentHashStr := hex.EncodeToString(currentHash[:])
@@ -750,14 +751,38 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, rete
 		return fmt.Errorf("parsear xml: %w", err)
 	}
 
-	// Determinar el tipo de comprobante
-	tableName := "cfdis"
-	campos := cfdiCampos
-	isReten := false
-	if xmlquery.FindOne(doc, "/*[local-name()='Retenciones']") != nil {
+	// Determinar el tipo de comprobante de forma estricta por el nodo raíz
+	root := xmlquery.FindOne(doc, "/*")
+	if root == nil {
+		return fmt.Errorf("xml inválido: no se encontró nodo raíz")
+	}
+
+	var tableName string
+	var campos []Campo
+	var isReten bool
+
+	switch root.Data {
+	case "Comprobante":
+		tableName = "cfdis"
+		campos = cfdiCampos
+		isReten = false
+	case "Retenciones":
 		tableName = "retenciones"
 		campos = retenCampos
 		isReten = true
+	default:
+		// Soporte para namespaces en el nombre del nodo (ej: cfdi:Comprobante)
+		if strings.HasSuffix(root.Data, ":Comprobante") {
+			tableName = "cfdis"
+			campos = cfdiCampos
+			isReten = false
+		} else if strings.HasSuffix(root.Data, ":Retenciones") {
+			tableName = "retenciones"
+			campos = retenCampos
+			isReten = true
+		} else {
+			return fmt.Errorf("tipo de comprobante no soportado: %s", root.Data)
+		}
 	}
 
 	// UUID se maneja por separado ya que es la clave principal.
