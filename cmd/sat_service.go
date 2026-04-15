@@ -482,13 +482,15 @@ receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalRece
 receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
-# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
-concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
-concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
-concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
-concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
-concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
-concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
+# CONCEPTOS (ESTRATEGIAS DE EXTRACCIÓN)
+# Opción A: Solo el primer concepto
+primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+
+# Opción B: Todos los conceptos agrupados (Separados por |)
+todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
+todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
+todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
 
 # TIMBRE FISCAL DIGITAL (TFD)
 tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
@@ -630,9 +632,13 @@ reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //
 reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
 
 # DESGLOSE DE RETENCIONES ESPECÍFICAS
+# Opción A: Primeras 3 retenciones por separado
 reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
 reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet`
+reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
+
+# Opción B: Todas las retenciones agrupadas (Separadas por |)
+reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-name()='ImpRetenidos']/@MontoRet`
 		if err := ioutil.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos de retenciones: %w", err)
 		}
