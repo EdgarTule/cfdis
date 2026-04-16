@@ -1,5 +1,5 @@
 # ==============================================================================
-# GUÍA DEFINITIVA DE CAMPOS CFDI (3.3 Y 4.0) Y RETENCIONES (1.0 Y 2.0)
+# GUÍA DE REFERENCIA DE CAMPOS CFDI (3.3 Y 4.0)
 # Formato: nombre_columna TIPO_SQL XPath
 # ==============================================================================
 
@@ -27,9 +27,9 @@ global_periodicidad TEXT //*[local-name()='InformacionGlobal']/@Periodicidad
 global_meses TEXT //*[local-name()='InformacionGlobal']/@Meses
 global_año TEXT //*[local-name()='InformacionGlobal']/@Año
 
-# CFDI RELACIONADOS (PRIMER REGISTRO)
+# CFDI RELACIONADOS (TODOS LOS UUIDS RELACIONADOS EN UNA COLUMNA)
 relacion_tipo TEXT //*[local-name()='CfdiRelacionados']/@TipoRelacion
-relacion_uuid TEXT //*[local-name()='CfdiRelacionado']/@UUID
+relacion_uuids TEXT //*[local-name()='CfdiRelacionado']/@UUID
 
 # EMISOR (CFDI)
 emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
@@ -43,13 +43,17 @@ receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalRece
 receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
-# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
-concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
-concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
-concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
-concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
-concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
-concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
+# CONCEPTOS (ESTRATEGIAS DE EXTRACCIÓN)
+
+# Opción A: Extraer el primer concepto (estándar)
+primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+
+# Opción B: Agrupar TODOS los conceptos en una sola columna (Separados por |)
+todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
+todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
+todos_conceptos_cant TEXT //*[local-name()='Concepto']/@Cantidad
+todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
 
 # TIMBRE FISCAL DIGITAL (TFD)
 tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
@@ -71,47 +75,6 @@ ieps_trasladado DECIMAL(18,2) //*[local-name()='Traslado'][@Impuesto='003']/@Imp
 # IMPUESTOS LOCALES
 total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeRetenciones
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
-
-# ------------------------------------------------------------------------------
-# RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
-# ------------------------------------------------------------------------------
-reten_version TEXT //*[local-name()='Retenciones']/@Version
-reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
-reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
-reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
-reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
-
-# EMISOR Y RECEPTOR (RETENCIONES)
-# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
-reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
-reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
-# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
-reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
-reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
-
-# PERIODO Y TOTALES
-reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
-reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
-reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
-
-reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
-reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
-reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
-reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
-reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
-
-# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
-reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
-reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
-reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
-
-reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
-reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
-reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-
-reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
-reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
-reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
 
 # ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)

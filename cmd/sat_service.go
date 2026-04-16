@@ -431,6 +431,7 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 
 func (s *SatService) SyncDatabase() error {
 	camposFile := filepath.Join(s.rfcDir, "campos")
+	camposRetenFile := filepath.Join(s.rfcDir, "campos_retenciones")
 	dbPath := filepath.Join(s.rfcDir, "sat.db")
 	hashFile := filepath.Join(s.rfcDir, "campos.md5")
 
@@ -481,13 +482,15 @@ receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalRece
 receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
-# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
-concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
-concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
-concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
-concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
-concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
-concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
+# CONCEPTOS (ESTRATEGIAS DE EXTRACCIÓN)
+# Opción A: Solo el primer concepto
+primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+
+# Opción B: Todos los conceptos agrupados (Separados por |)
+todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
+todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
+todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
 
 # TIMBRE FISCAL DIGITAL (TFD)
 tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
@@ -601,27 +604,68 @@ cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistR
 		fmt.Printf("Archivo 'campos' no encontrado. Se creó uno por defecto en %s\n", camposFile)
 	}
 
-	// Comprobar si el archivo campos ha cambiado
-	camposBytes, err := ioutil.ReadFile(camposFile)
-	if err != nil {
-		return fmt.Errorf("no se pudo leer el archivo de campos: %w", err)
+	if _, err := os.Stat(camposRetenFile); os.IsNotExist(err) {
+		defaultReten := `# ==============================================================================
+# CAMPOS DE RETENCIONES E INFORMACIÓN DE PAGOS (v1.0 Y v2.0)
+# ==============================================================================
+reten_version TEXT //*[local-name()='Retenciones']/@Version
+reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
+reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
+reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
+reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
+
+# EMISOR Y RECEPTOR (RETENCIONES)
+reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
+reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
+reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
+reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
+
+# PERIODO Y TOTALES
+reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
+reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
+reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
+
+reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
+reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
+reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
+reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
+reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
+
+# DESGLOSE DE RETENCIONES ESPECÍFICAS
+# Opción A: Primeras 3 retenciones por separado
+reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
+reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
+reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
+
+# Opción B: Todas las retenciones agrupadas (Separadas por |)
+reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-name()='ImpRetenidos']/@MontoRet`
+		if err := ioutil.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
+			return fmt.Errorf("no se pudo crear el archivo de campos de retenciones: %w", err)
+		}
 	}
-	currentHash := md5.Sum(camposBytes)
+
+	// Comprobar si los archivos de campos han cambiado
+	camposBytes, _ := ioutil.ReadFile(camposFile)
+	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
+	allCamposBytes := append(camposBytes, camposRetenBytes...)
+	allCamposBytes = append(allCamposBytes, []byte("v2")...) // Forzar re-sync por cambio de lógica de detección
+
+	currentHash := md5.Sum(allCamposBytes)
 	currentHashStr := hex.EncodeToString(currentHash[:])
 
 	savedHashBytes, err := ioutil.ReadFile(hashFile)
 	if err == nil && string(savedHashBytes) != currentHashStr {
-		fmt.Println("El archivo 'campos' ha cambiado. Re-sincronizando la base de datos desde cero...")
+		fmt.Println("Los archivos de 'campos' han cambiado. Re-sincronizando la base de datos desde cero...")
 		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("no se pudo borrar la base de datos antigua: %w", err)
 		}
 	}
 
 	// Proceder con la sincronización
-	campos, err := parseCamposFile(camposFile)
-	if err != nil {
-		return err
-	}
+	cfdiCampos, err := parseCamposFile(camposFile)
+	if err != nil { return err }
+	retenCampos, err := parseCamposFile(camposRetenFile)
+	if err != nil { return err }
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -629,9 +673,12 @@ cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistR
 	}
 	defer db.Close()
 
-	if err := createTable(db, campos); err != nil {
-		return err
-	}
+	if err := createTable(db, "cfdis", cfdiCampos); err != nil { return err }
+	if err := createTable(db, "retenciones", retenCampos); err != nil { return err }
+
+	// Asegurar que la columna 'subtipo' exista para retrocompatibilidad en la tabla antigua
+	_, _ = db.Exec("ALTER TABLE cfdis ADD COLUMN subtipo TEXT")
+	_, _ = db.Exec("ALTER TABLE retenciones ADD COLUMN subtipo TEXT")
 
 	cfdiDir := filepath.Join(s.rfcDir, "cfdis")
 	files, err := ioutil.ReadDir(cfdiDir)
@@ -644,7 +691,7 @@ cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistR
 			continue
 		}
 		xmlPath := filepath.Join(cfdiDir, file.Name())
-		if err := s.processXMLFile(db, xmlPath, campos); err != nil {
+		if err := s.processXMLFile(db, xmlPath, cfdiCampos, retenCampos); err != nil {
 			fmt.Printf("Error procesando %s: %v\n", file.Name(), err)
 		}
 	}
@@ -684,9 +731,9 @@ func parseCamposFile(path string) ([]Campo, error) {
 	return campos, scanner.Err()
 }
 
-func createTable(db *sql.DB, campos []Campo) error {
+func createTable(db *sql.DB, tableName string, campos []Campo) error {
 	var sb strings.Builder
-	sb.WriteString("CREATE TABLE IF NOT EXISTS cfdis (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, ")
+	sb.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT UNIQUE, xml_path TEXT, subtipo TEXT, ", tableName))
 	for i, campo := range campos {
 		sb.WriteString(fmt.Sprintf("%s %s", campo.Nombre, campo.Tipo))
 		if i < len(campos)-1 {
@@ -699,7 +746,7 @@ func createTable(db *sql.DB, campos []Campo) error {
 	return err
 }
 
-func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) error {
+func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, retenCampos []Campo) error {
 	xmlBytes, err := ioutil.ReadFile(xmlPath)
 	if err != nil {
 		return err
@@ -710,44 +757,100 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, campos []Campo) 
 		return fmt.Errorf("parsear xml: %w", err)
 	}
 
+	// Determinar el tipo de comprobante de forma estricta por el nodo raíz
+	root := xmlquery.FindOne(doc, "/*")
+	if root == nil {
+		return fmt.Errorf("xml inválido: no se encontró nodo raíz")
+	}
+
+	var tableName string
+	var campos []Campo
+	var isReten bool
+
+	switch root.Data {
+	case "Comprobante":
+		tableName = "cfdis"
+		campos = cfdiCampos
+		isReten = false
+	case "Retenciones":
+		tableName = "retenciones"
+		campos = retenCampos
+		isReten = true
+	default:
+		// Soporte para namespaces en el nombre del nodo (ej: cfdi:Comprobante)
+		if strings.HasSuffix(root.Data, ":Comprobante") {
+			tableName = "cfdis"
+			campos = cfdiCampos
+			isReten = false
+		} else if strings.HasSuffix(root.Data, ":Retenciones") {
+			tableName = "retenciones"
+			campos = retenCampos
+			isReten = true
+		} else {
+			return fmt.Errorf("tipo de comprobante no soportado: %s", root.Data)
+		}
+	}
+
 	// UUID se maneja por separado ya que es la clave principal.
-	uuidNode := xmlquery.FindOne(doc, "//*[local-name()='TimbreFiscalDigital']/@UUID")
+	uuidXPath := "//*[local-name()='TimbreFiscalDigital']/@UUID"
+	uuidNode := xmlquery.FindOne(doc, uuidXPath)
 	if uuidNode == nil {
 		return fmt.Errorf("no se encontró el UUID en el XML")
 	}
 	uuid := uuidNode.InnerText()
 
 	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM cfdis WHERE uuid = ?", uuid).Scan(&count)
+	err = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE uuid = ?", tableName), uuid).Scan(&count)
 	if err != nil {
 		return err
 	}
 	if count > 0 {
 		return nil
 	}
-	fmt.Printf("Insertando XML en la DB: %s\n", filepath.Base(xmlPath))
+	fmt.Printf("Insertando %s en la DB: %s\n", tableName, filepath.Base(xmlPath))
 
-	values := make([]interface{}, len(campos)+2)
+	// Determinar subtipo (emitido o recibido)
+	subtipo := "recibido"
+	var emisorRfcXPath string
+	if isReten {
+		emisorRfcXPath = "//*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor"
+	} else {
+		emisorRfcXPath = "//*[local-name()='Emisor']/@Rfc"
+	}
+	emisorNode := xmlquery.FindOne(doc, emisorRfcXPath)
+	if emisorNode != nil && strings.ToUpper(emisorNode.InnerText()) == strings.ToUpper(s.rfc) {
+		subtipo = "emitido"
+	}
+
+	values := make([]interface{}, len(campos)+3)
 	values[0] = uuid
 	values[1] = xmlPath
+	values[2] = subtipo
 	for i, campo := range campos {
-		node := xmlquery.FindOne(doc, campo.XPath)
-		if node != nil {
-			values[i+2] = node.InnerText()
+		nodes := xmlquery.Find(doc, campo.XPath)
+		if len(nodes) > 0 {
+			var sb strings.Builder
+			for j, node := range nodes {
+				sb.WriteString(node.InnerText())
+				if j < len(nodes)-1 {
+					sb.WriteString(" | ")
+				}
+			}
+			values[i+3] = sb.String()
 		} else {
-			values[i+2] = nil
+			values[i+3] = nil
 		}
 	}
 
 	var cols, placeholders strings.Builder
-	cols.WriteString("uuid, xml_path")
-	placeholders.WriteString("?, ?")
+	cols.WriteString("uuid, xml_path, subtipo")
+	placeholders.WriteString("?, ?, ?")
 	for _, campo := range campos {
 		cols.WriteString(", " + campo.Nombre)
 		placeholders.WriteString(", ?")
 	}
 
-	stmt := fmt.Sprintf("INSERT INTO cfdis (%s) VALUES (%s)", cols.String(), placeholders.String())
+	stmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", tableName, cols.String(), placeholders.String())
 	_, err = db.Exec(stmt, values...)
 	return err
 }
