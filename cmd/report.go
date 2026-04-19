@@ -102,7 +102,7 @@ func runReport(dbPath, query, csvPath, tipo string) error {
 		}
 	} else {
 		// Imprimir encabezados a consola
-		fmt.Println(strings.Join(columns, "|"))
+		fmt.Println(strings.Join(columns, ";"))
 	}
 
 	// Preparar para escanear
@@ -142,7 +142,7 @@ func runReport(dbPath, query, csvPath, tipo string) error {
 				return err
 			}
 		} else {
-			fmt.Println(strings.Join(rowStrings, "|"))
+			fmt.Println(strings.Join(rowStrings, ";"))
 		}
 		rowCount++
 	}

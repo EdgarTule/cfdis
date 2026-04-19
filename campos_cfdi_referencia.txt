@@ -49,7 +49,7 @@ receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
 primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
 
-# Opción B: Agrupar TODOS los conceptos en una sola columna (Separados por ;)
+# Opción B: Agrupar TODOS los conceptos en una sola columna (Separados por |)
 todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
 todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
 todos_conceptos_cant TEXT //*[local-name()='Concepto']/@Cantidad
