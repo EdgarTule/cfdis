@@ -641,10 +641,14 @@ reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | /
 	// Comprobar si los archivos de campos han cambiado
 	camposBytes, _ := ioutil.ReadFile(camposFile)
 	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
-	allCamposBytes := append(camposBytes, camposRetenBytes...)
-	allCamposBytes = append(allCamposBytes, []byte("v5")...) // Forzar re-sync por eliminación de extracción avanzada
+	// Combinamos con un delimitador para asegurar que cambios en cualquiera disparen el re-sync
+	var combined bytes.Buffer
+	combined.Write(camposBytes)
+	combined.WriteString(":::SEP:::")
+	combined.Write(camposRetenBytes)
+	combined.WriteString(":::v5:::")
 
-	currentHash := md5.Sum(allCamposBytes)
+	currentHash := md5.Sum(combined.Bytes())
 	currentHashStr := hex.EncodeToString(currentHash[:])
 
 	savedHashBytes, err := ioutil.ReadFile(hashFile)
