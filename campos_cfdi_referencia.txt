@@ -27,9 +27,9 @@ global_periodicidad TEXT //*[local-name()='InformacionGlobal']/@Periodicidad
 global_meses TEXT //*[local-name()='InformacionGlobal']/@Meses
 global_año TEXT //*[local-name()='InformacionGlobal']/@Año
 
-# CFDI RELACIONADOS (TODOS LOS UUIDS RELACIONADOS EN UNA COLUMNA)
+# CFDI RELACIONADOS (PRIMER REGISTRO)
 relacion_tipo TEXT //*[local-name()='CfdiRelacionados']/@TipoRelacion
-relacion_uuids TEXT //*[local-name()='CfdiRelacionado']/@UUID
+relacion_uuid TEXT //*[local-name()='CfdiRelacionado']/@UUID
 
 # EMISOR (CFDI)
 emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
