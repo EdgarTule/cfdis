@@ -482,15 +482,13 @@ receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalRece
 receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
-# CONCEPTOS (ESTRATEGIAS DE EXTRACCIÓN)
-# Opción A: Solo el primer concepto
-primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
-primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
-
-# Opción B: Todos los conceptos agrupados (Separados por |)
-todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
-todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
-todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
+# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
+concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
+concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
+concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
+concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
 
 # TIMBRE FISCAL DIGITAL (TFD)
 tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
@@ -631,14 +629,10 @@ reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //
 reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
 reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
 
-# DESGLOSE DE RETENCIONES ESPECÍFICAS
-# Opción A: Primeras 3 retenciones por separado
+# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
 reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
 reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
-
-# Opción B: Todas las retenciones agrupadas (Separadas por |)
-reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-name()='ImpRetenidos']/@MontoRet`
+reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet`
 		if err := ioutil.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos de retenciones: %w", err)
 		}
@@ -648,7 +642,7 @@ reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-n
 	camposBytes, _ := ioutil.ReadFile(camposFile)
 	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
 	allCamposBytes := append(camposBytes, camposRetenBytes...)
-	allCamposBytes = append(allCamposBytes, []byte("v4")...) // Forzar re-sync por cambio de separador multi-valor (regreso a |)
+	allCamposBytes = append(allCamposBytes, []byte("v5")...) // Forzar re-sync por eliminación de extracción avanzada
 
 	currentHash := md5.Sum(allCamposBytes)
 	currentHashStr := hex.EncodeToString(currentHash[:])
@@ -827,16 +821,9 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, rete
 	values[1] = xmlPath
 	values[2] = subtipo
 	for i, campo := range campos {
-		nodes := xmlquery.Find(doc, campo.XPath)
-		if len(nodes) > 0 {
-			var sb strings.Builder
-			for j, node := range nodes {
-				sb.WriteString(node.InnerText())
-				if j < len(nodes)-1 {
-					sb.WriteString("|")
-				}
-			}
-			values[i+3] = sb.String()
+		node := xmlquery.FindOne(doc, campo.XPath)
+		if node != nil {
+			values[i+3] = node.InnerText()
 		} else {
 			values[i+3] = nil
 		}
