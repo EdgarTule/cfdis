@@ -487,7 +487,7 @@ receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
 primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
 
-# Opción B: Todos los conceptos agrupados (Separados por |)
+# Opción B: Todos los conceptos agrupados (Separados por ;)
 todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
 todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
 todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
@@ -637,7 +637,7 @@ reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | /
 reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
 reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
 
-# Opción B: Todas las retenciones agrupadas (Separadas por |)
+# Opción B: Todas las retenciones agrupadas (Separadas por ;)
 reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-name()='ImpRetenidos']/@MontoRet`
 		if err := ioutil.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos de retenciones: %w", err)
@@ -648,7 +648,7 @@ reten_todos_montos TEXT //*[local-name()='ImpRetenidos']/@montoRet | //*[local-n
 	camposBytes, _ := ioutil.ReadFile(camposFile)
 	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
 	allCamposBytes := append(camposBytes, camposRetenBytes...)
-	allCamposBytes = append(allCamposBytes, []byte("v2")...) // Forzar re-sync por cambio de lógica de detección
+	allCamposBytes = append(allCamposBytes, []byte("v3")...) // Forzar re-sync por cambio de separador multi-valor
 
 	currentHash := md5.Sum(allCamposBytes)
 	currentHashStr := hex.EncodeToString(currentHash[:])
@@ -833,7 +833,7 @@ func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, rete
 			for j, node := range nodes {
 				sb.WriteString(node.InnerText())
 				if j < len(nodes)-1 {
-					sb.WriteString(" | ")
+					sb.WriteString("; ")
 				}
 			}
 			values[i+3] = sb.String()
