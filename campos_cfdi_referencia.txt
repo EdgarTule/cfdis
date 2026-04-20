@@ -27,9 +27,9 @@ global_periodicidad TEXT //*[local-name()='InformacionGlobal']/@Periodicidad
 global_meses TEXT //*[local-name()='InformacionGlobal']/@Meses
 global_año TEXT //*[local-name()='InformacionGlobal']/@Año
 
-# CFDI RELACIONADOS (TODOS LOS UUIDS RELACIONADOS EN UNA COLUMNA)
+# CFDI RELACIONADOS (PRIMER REGISTRO)
 relacion_tipo TEXT //*[local-name()='CfdiRelacionados']/@TipoRelacion
-relacion_uuids TEXT //*[local-name()='CfdiRelacionado']/@UUID
+relacion_uuid TEXT //*[local-name()='CfdiRelacionado']/@UUID
 
 # EMISOR (CFDI)
 emisor_rfc TEXT //*[local-name()='Emisor']/@Rfc
@@ -43,17 +43,13 @@ receptor_domicilio_fiscal TEXT //*[local-name()='Receptor']/@DomicilioFiscalRece
 receptor_regimen_fiscal TEXT //*[local-name()='Receptor']/@RegimenFiscalReceptor
 receptor_uso_cfdi TEXT //*[local-name()='Receptor']/@UsoCFDI
 
-# CONCEPTOS (ESTRATEGIAS DE EXTRACCIÓN)
-
-# Opción A: Extraer el primer concepto (estándar)
-primer_concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
-primer_concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
-
-# Opción B: Agrupar TODOS los conceptos en una sola columna (Separados por |)
-todos_conceptos_clave TEXT //*[local-name()='Concepto']/@ClaveProdServ
-todos_conceptos_desc TEXT //*[local-name()='Concepto']/@Descripcion
-todos_conceptos_cant TEXT //*[local-name()='Concepto']/@Cantidad
-todos_conceptos_imp TEXT //*[local-name()='Concepto']/@Importe
+# CONCEPTOS (EXTRACCIÓN DEL PRIMER CONCEPTO)
+concepto_clave_prod_serv TEXT //*[local-name()='Concepto'][1]/@ClaveProdServ
+concepto_descripcion TEXT //*[local-name()='Concepto'][1]/@Descripcion
+concepto_cantidad DECIMAL(18,4) //*[local-name()='Concepto'][1]/@Cantidad
+concepto_valor_unitario DECIMAL(18,2) //*[local-name()='Concepto'][1]/@ValorUnitario
+concepto_importe DECIMAL(18,2) //*[local-name()='Concepto'][1]/@Importe
+concepto_objeto_imp TEXT //*[local-name()='Concepto'][1]/@ObjetoImp
 
 # TIMBRE FISCAL DIGITAL (TFD)
 tfd_version TEXT //*[local-name()='TimbreFiscalDigital']/@Version
