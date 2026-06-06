@@ -21,17 +21,6 @@ var (
 	reqEnd       string
 )
 
-const (
-	requestURL = "https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/SolicitaDescargaService.svc"
-
-	// Nota: El digest se calcula sobre el contenido de <des:solicitud>, no sobre todo el envelope.
-	soapRequestTemplate = `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:des="http://DescargaMasivaTerceros.sat.gob.mx" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header/><s:Body>%s</s:Body></s:Envelope>`
-
-	solicitudEmitidosTemplate = `<des:SolicitaDescarga><des:solicitud FechaFinal="%s" FechaInicial="%s" RfcEmisor="%s" TipoSolicitud="CFDI"><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#_0"><Transforms><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>%s</DigestValue></Reference></SignedInfo><SignatureValue>%s</SignatureValue><KeyInfo><X509Data><X509IssuerSerial><X509IssuerName>%s</X509IssuerName><X509SerialNumber>%s</X509SerialNumber></X509IssuerSerial><X509Certificate>%s</X509Certificate></X509Data></KeyInfo></Signature></des:solicitud></des:SolicitaDescarga>`
-
-	solicitudRecibidosTemplate = `<des:SolicitaDescarga><des:solicitud FechaFinal="%s" FechaInicial="%s" RfcReceptores="%s" TipoSolicitud="CFDI"><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#_0"><Transforms><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>%s</DigestValue></Reference></SignedInfo><SignatureValue>%s</SignatureValue><KeyInfo><X509Data><X509IssuerSerial><X509IssuerName>%s</X509IssuerName><X509SerialNumber>%s</X509SerialNumber></X509IssuerSerial><X509Certificate>%s</X509Certificate></X509Data></KeyInfo></Signature></des:solicitud></des:SolicitaDescarga>`
-)
-
 type SoapRequestResponse struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Body    struct {
