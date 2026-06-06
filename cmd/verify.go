@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +32,7 @@ var verifyCmd = &cobra.Command{
 			return
 		}
 		var config map[string]string
-		configBytes, _ := ioutil.ReadFile(configPath)
+		configBytes, _ := os.ReadFile(configPath)
 		json.Unmarshal(configBytes, &config)
 
 		fmt.Print("Por favor, introduce la contraseña de la e.firma: ")

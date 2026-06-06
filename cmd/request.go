@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,25 +12,12 @@ import (
 )
 
 var (
-	reqRfc       string
-	reqTipo      string
-	reqSubTipo   string
-	reqStart     string
-	reqEnd       string
+	reqRfc     string
+	reqTipo    string
+	reqSubTipo string
+	reqStart   string
+	reqEnd     string
 )
-
-type SoapRequestResponse struct {
-	XMLName xml.Name `xml:"Envelope"`
-	Body    struct {
-		SolicitaDescargaResponse struct {
-			SolicitaDescargaResult struct {
-				ID         string `xml:"IdSolicitud,attr"`
-				CodEstatus string `xml:"CodEstatus,attr"`
-				Mensaje    string `xml:"Mensaje,attr"`
-			} `xml:"SolicitaDescargaResult"`
-		} `xml:"SolicitaDescargaResponse"`
-	} `xml:"Body"`
-}
 
 var requestCmd = &cobra.Command{
 	Use:   "request",
@@ -59,7 +44,7 @@ var requestCmd = &cobra.Command{
 			return
 		}
 		var config map[string]string
-		configBytes, _ := ioutil.ReadFile(configPath)
+		configBytes, _ := os.ReadFile(configPath)
 		json.Unmarshal(configBytes, &config)
 
 		fmt.Print("Por favor, introduce la contraseña de la e.firma: ")
