@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,7 +31,7 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 		}
 
 		// Leer el archivo .cer
-		cerBytes, err := ioutil.ReadFile(cerPath)
+		cerBytes, err := os.ReadFile(cerPath)
 		if err != nil {
 			fmt.Printf("Error al leer el archivo .cer: %v\n", err)
 			return
@@ -93,7 +92,7 @@ en ~/.sat/<RFC> y guarda la configuración de los archivos de la e.firma.`,
 		}
 
 		configPath := filepath.Join(rfcDir, "config.json")
-		if err := ioutil.WriteFile(configPath, configBytes, 0644); err != nil {
+		if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 			fmt.Printf("Error al guardar el archivo de configuración: %v\n", err)
 			return
 		}
@@ -132,10 +131,8 @@ func findRfcInCertificate(cert *x509.Certificate) (string, error) {
 		return matches[1], nil
 	}
 
-
 	return "", fmt.Errorf("no se encontró un RFC en los campos del certificado")
 }
-
 
 func init() {
 	rootCmd.AddCommand(addRfcCmd)

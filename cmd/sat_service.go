@@ -15,7 +15,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,6 +36,7 @@ type MemoryKeyStore struct {
 	key  *rsa.PrivateKey
 	cert *x509.Certificate
 }
+
 func (m *MemoryKeyStore) GetKeyPair() (*rsa.PrivateKey, []byte, error) {
 	return m.key, m.cert.Raw, nil
 }
@@ -77,16 +77,24 @@ func NewSatService(rfc string, keyPath string, cerPath string, password []byte) 
 	var cert *x509.Certificate
 
 	if keyPath != "" && cerPath != "" && password != nil {
-		keyBytes, err := ioutil.ReadFile(keyPath)
-		if err != nil { return nil, err }
-		cerBytes, err := ioutil.ReadFile(cerPath)
-		if err != nil { return nil, err }
+		keyBytes, err := os.ReadFile(keyPath)
+		if err != nil {
+			return nil, err
+		}
+		cerBytes, err := os.ReadFile(cerPath)
+		if err != nil {
+			return nil, err
+		}
 
 		privateKey, err := pkcs8.ParsePKCS8PrivateKey(keyBytes, password)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		var ok bool
 		rsaPrivateKey, ok = privateKey.(*rsa.PrivateKey)
-		if !ok { return nil, fmt.Errorf("la llave no es de tipo RSA") }
+		if !ok {
+			return nil, fmt.Errorf("la llave no es de tipo RSA")
+		}
 
 		// Handle both PEM and DER certificate formats
 		var certBytes []byte
@@ -97,7 +105,9 @@ func NewSatService(rfc string, keyPath string, cerPath string, password []byte) 
 			certBytes = cerBytes // Assume DER
 		}
 		cert, err = x509.ParseCertificate(certBytes)
-		if err != nil { return nil, fmt.Errorf("parsear certificado: %w", err) }
+		if err != nil {
+			return nil, fmt.Errorf("parsear certificado: %w", err)
+		}
 	}
 
 	return &SatService{
@@ -136,7 +146,7 @@ func (s *SatService) EnsureAuthenticated() error {
 	}
 	// Si cambiamos de tipo de servicio, el tokenPath ya fue actualizado en SetServiceType.
 	if info, err := os.Stat(s.tokenPath); err == nil && time.Since(info.ModTime()) < (4*time.Minute) {
-		tokenBytes, err := ioutil.ReadFile(s.tokenPath)
+		tokenBytes, err := os.ReadFile(s.tokenPath)
 		if err == nil {
 			s.token = string(tokenBytes)
 			fmt.Println("Usando token de autenticación guardado.")
@@ -160,33 +170,46 @@ func (s *SatService) authenticate() error {
 	signInfoHasher.Write([]byte(signedInfoXML))
 	signedInfoDigest := signInfoHasher.Sum(nil)
 	signatureBytes, err := rsa.SignPKCS1v15(rand.Reader, s.key, crypto.SHA1, signedInfoDigest)
-	if err != nil { return fmt.Errorf("firmar digest: %w", err) }
+	if err != nil {
+		return fmt.Errorf("firmar digest: %w", err)
+	}
 	signature := base64.StdEncoding.EncodeToString(signatureBytes)
 	certBase64 := base64.StdEncoding.EncodeToString(s.cert.Raw)
 	soapRequest := fmt.Sprintf(`<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:u="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><s:Header><o:Security s:mustUnderstand="1" xmlns:o="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"><u:Timestamp u:Id="_0"><u:Created>%s</u:Created><u:Expires>%s</u:Expires></u:Timestamp><o:BinarySecurityToken u:Id="uuid-ee5df542-c65a-423c-974a-a0cb38f6501a-1" ValueType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">%s</o:BinarySecurityToken><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#_0"><Transforms><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>%s</DigestValue></Reference></SignedInfo><SignatureValue>%s</SignatureValue><KeyInfo><o:SecurityTokenReference><o:Reference ValueType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3" URI="#uuid-ee5df542-c65a-423c-974a-a0cb38f6501a-1"/></o:SecurityTokenReference></KeyInfo></Signature></o:Security></s:Header><s:Body><Autentica xmlns="http://DescargaMasivaTerceros.gob.mx"/></s:Body></s:Envelope>`, created, expires, certBase64, digest, signature)
 	authURL := s.getBaseURL("auth") + "/Autenticacion/Autenticacion.svc"
 	req, err := http.NewRequest("POST", authURL, strings.NewReader(soapRequest))
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "text/xml;charset=UTF-8")
 	req.Header.Set("SOAPAction", "http://DescargaMasivaTerceros.gob.mx/IAutenticacion/Autentica")
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
-	respBody, _ := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK { return fmt.Errorf("respuesta SAT (%d): %s", resp.StatusCode, string(respBody)) }
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("respuesta SAT (%d): %s", resp.StatusCode, string(respBody))
+	}
 	var authResponse SoapAuthResponse
-	if err := xml.Unmarshal(respBody, &authResponse); err != nil { return fmt.Errorf("parsear respuesta: %w\nRespuesta: %s", err, string(respBody)) }
-	if authResponse.Body.AutenticaResponse.AutenticaResult == "" { return fmt.Errorf("token vacío en respuesta: %s", string(respBody)) }
+	if err := xml.Unmarshal(respBody, &authResponse); err != nil {
+		return fmt.Errorf("parsear respuesta: %w\nRespuesta: %s", err, string(respBody))
+	}
+	if authResponse.Body.AutenticaResponse.AutenticaResult == "" {
+		return fmt.Errorf("token vacío en respuesta: %s", string(respBody))
+	}
 
 	// Guardar solo el valor del token, no toda la cabecera.
 	s.token = fmt.Sprintf("WRAP access_token=\"%s\"", authResponse.Body.AutenticaResponse.AutenticaResult)
-	if err := ioutil.WriteFile(s.tokenPath, []byte(s.token), 0644); err != nil { return fmt.Errorf("guardar token: %w", err) }
+	if err := os.WriteFile(s.tokenPath, []byte(s.token), 0644); err != nil {
+		return fmt.Errorf("guardar token: %w", err)
+	}
 
 	fmt.Println("Autenticación exitosa. Token guardado.")
 	return nil
 }
-
 
 // --- Generic Sending Logic ---
 func (s *SatService) sendSoapRequest(soapAction, url string, envelope *etree.Element) ([]byte, error) {
@@ -204,10 +227,12 @@ func (s *SatService) sendSoapRequest(soapAction, url string, envelope *etree.Ele
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
-	respBody, _ := ioutil.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("respuesta SAT (%d): %s", resp.StatusCode, string(respBody))
 	}
@@ -238,7 +263,6 @@ func (s *SatService) buildSoapEnvelope(bodyContent, nodeToSign *etree.Element) (
 
 	return envelope, nil
 }
-
 
 // --- Service Methods ---
 func (s *SatService) SendRequest(reqSubTipo, startDate, endDate string) (string, error) {
@@ -284,7 +308,9 @@ func (s *SatService) SendRequest(reqSubTipo, startDate, endDate string) (string,
 		solicitaURL,
 		envelope,
 	)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	// 4. Parsear la respuesta
 	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
@@ -385,7 +411,9 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 		descargaURL,
 		envelope,
 	)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	doc, err := xmlquery.Parse(strings.NewReader(string(respBody)))
 	if err != nil {
@@ -407,24 +435,36 @@ func (s *SatService) DownloadPackage(packageID string, targetDir string) error {
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	for _, f := range zipReader.File {
 		fpath := filepath.Join(targetDir, f.Name)
-		if _, err := os.Stat(fpath); err == nil { continue }
+		if _, err := os.Stat(fpath); err == nil {
+			continue
+		}
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(fpath, os.ModePerm)
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil { return err }
+		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+			return err
+		}
 		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		rc, err := f.Open()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		_, err = io.Copy(outFile, rc)
 		outFile.Close()
 		rc.Close()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -512,47 +552,6 @@ total_retenciones_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@To
 total_traslados_locales DECIMAL(18,2) //*[local-name()='ImpuestosLocales']/@TotaldeTraslados
 
 # ------------------------------------------------------------------------------
-# RETENCIONES E INFORMACIÓN DE PAGOS (COMPATIBLE v1.0 Y v2.0)
-# ------------------------------------------------------------------------------
-reten_version TEXT //*[local-name()='Retenciones']/@Version
-reten_folio_int TEXT //*[local-name()='Retenciones']/@FolioInt
-reten_fecha_exp DATETIME //*[local-name()='Retenciones']/@FechaExp
-reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
-reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
-
-# EMISOR Y RECEPTOR (RETENCIONES)
-# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
-reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
-reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
-# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
-reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
-reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
-
-# PERIODO Y TOTALES
-reten_periodo_mes_ini INTEGER //*[local-name()='Periodo']/@MesIni
-reten_periodo_mes_fin INTEGER //*[local-name()='Periodo']/@MesFin
-reten_periodo_ejercicio INTEGER //*[local-name()='Periodo']/@Ejerc | //*[local-name()='Periodo']/@Ejercicio
-
-reten_total_operacion DECIMAL(18,2) //*[local-name()='Totales']/@montoTotOper | //*[local-name()='Totales']/@MontoTotOper
-reten_total_exento DECIMAL(18,2) //*[local-name()='Totales']/@montoTotExent | //*[local-name()='Totales']/@MontoTotExent
-reten_total_gravado DECIMAL(18,2) //*[local-name()='Totales']/@montoTotGrav | //*[local-name()='Totales']/@MontoTotGrav
-reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //*[local-name()='Totales']/@MontoTotRet
-reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
-
-# DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
-reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
-reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
-reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
-
-reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
-reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
-reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
-
-reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
-reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
-reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet
-
-# ------------------------------------------------------------------------------
 # COMPLEMENTOS ESPECÍFICOS (CFDI)
 # ------------------------------------------------------------------------------
 
@@ -596,7 +595,7 @@ pagos_total_traslados_impuesto_iva_16 DECIMAL(18,2) //*[local-name()='Totales']/
 cp_version TEXT //*[local-name()='CartaPorte']/@Version
 cp_transp_internac TEXT //*[local-name()='CartaPorte']/@TranspInternac
 cp_total_dist_recorrida DECIMAL(18,2) //*[local-name()='CartaPorte']/@TotalDistRecorrida`
-		if err := ioutil.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
+		if err := os.WriteFile(camposFile, []byte(defaultCampos), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos por defecto: %w", err)
 		}
 		fmt.Printf("Archivo 'campos' no encontrado. Se creó uno por defecto en %s\n", camposFile)
@@ -613,8 +612,10 @@ reten_cve_retenc TEXT //*[local-name()='Retenciones']/@CveRetenc
 reten_desc_retenc TEXT //*[local-name()='Retenciones']/@DescRetenc
 
 # EMISOR Y RECEPTOR (RETENCIONES)
+# Nota: Soporta variantes v1.0 (@RfcE, @RFCEmisor) y v2.0 (@RfcEmisor)
 reten_emisor_rfc TEXT //*[local-name()='Emisor']/@RfcE | //*[local-name()='Emisor']/@RFCEmisor | //*[local-name()='Emisor']/@RfcEmisor
 reten_emisor_nombre TEXT //*[local-name()='Emisor']/@NomDenRazSocE | //*[local-name()='Emisor']/@Nombre
+# Receptor: v1.0 usa nodo Nacional (@RFCRecep) o directo (@RfcR); v2.0 atributos directos (@RfcReceptor)
 reten_receptor_rfc TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@RFCRecep | //*[local-name()='Receptor']/@RfcR | //*[local-name()='Receptor']/@RfcReceptor
 reten_receptor_nombre TEXT //*[local-name()='Receptor']/*[local-name()='Nacional']/@NomDenRazSocR | //*[local-name()='Receptor']/@Nombre
 
@@ -630,28 +631,36 @@ reten_total_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotRet | //
 reten_total_iva_retenido DECIMAL(18,2) //*[local-name()='Totales']/@montoTotIVARet | //*[local-name()='Totales']/@MontoTotIVARet
 
 # DESGLOSE DE RETENCIONES ESPECÍFICAS (HASTA 3 IMPUESTOS)
+reten_imp1_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@BaseRet
+reten_imp1_impuesto TEXT //*[local-name()='ImpRetenidos'][1]/@Impuesto | //*[local-name()='ImpRetenidos'][1]/@ImpuestoRet
 reten_imp1_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][1]/@montoRet | //*[local-name()='ImpRetenidos'][1]/@MontoRet
+
+reten_imp2_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@BaseRet
+reten_imp2_impuesto TEXT //*[local-name()='ImpRetenidos'][2]/@Impuesto | //*[local-name()='ImpRetenidos'][2]/@ImpuestoRet
 reten_imp2_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][2]/@montoRet | //*[local-name()='ImpRetenidos'][2]/@MontoRet
+
+reten_imp3_base DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@BaseRet
+reten_imp3_impuesto TEXT //*[local-name()='ImpRetenidos'][3]/@Impuesto | //*[local-name()='ImpRetenidos'][3]/@ImpuestoRet
 reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | //*[local-name()='ImpRetenidos'][3]/@MontoRet`
-		if err := ioutil.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
+		if err := os.WriteFile(camposRetenFile, []byte(defaultReten), 0644); err != nil {
 			return fmt.Errorf("no se pudo crear el archivo de campos de retenciones: %w", err)
 		}
 	}
 
 	// Comprobar si los archivos de campos han cambiado
-	camposBytes, _ := ioutil.ReadFile(camposFile)
-	camposRetenBytes, _ := ioutil.ReadFile(camposRetenFile)
+	camposBytes, _ := os.ReadFile(camposFile)
+	camposRetenBytes, _ := os.ReadFile(camposRetenFile)
 	// Combinamos con un delimitador para asegurar que cambios en cualquiera disparen el re-sync
 	var combined bytes.Buffer
 	combined.Write(camposBytes)
 	combined.WriteString(":::SEP:::")
 	combined.Write(camposRetenBytes)
-	combined.WriteString(":::v5:::")
+	combined.WriteString(":::v6:::")
 
 	currentHash := md5.Sum(combined.Bytes())
 	currentHashStr := hex.EncodeToString(currentHash[:])
 
-	savedHashBytes, err := ioutil.ReadFile(hashFile)
+	savedHashBytes, err := os.ReadFile(hashFile)
 	if err == nil && string(savedHashBytes) != currentHashStr {
 		fmt.Println("Los archivos de 'campos' han cambiado. Re-sincronizando la base de datos desde cero...")
 		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
@@ -661,9 +670,13 @@ reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | /
 
 	// Proceder con la sincronización
 	cfdiCampos, err := parseCamposFile(camposFile)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	retenCampos, err := parseCamposFile(camposRetenFile)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -671,15 +684,19 @@ reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | /
 	}
 	defer db.Close()
 
-	if err := createTable(db, "cfdis", cfdiCampos); err != nil { return err }
-	if err := createTable(db, "retenciones", retenCampos); err != nil { return err }
+	if err := createTable(db, "cfdis", cfdiCampos); err != nil {
+		return err
+	}
+	if err := createTable(db, "retenciones", retenCampos); err != nil {
+		return err
+	}
 
 	// Asegurar que la columna 'subtipo' exista para retrocompatibilidad en la tabla antigua
 	_, _ = db.Exec("ALTER TABLE cfdis ADD COLUMN subtipo TEXT")
 	_, _ = db.Exec("ALTER TABLE retenciones ADD COLUMN subtipo TEXT")
 
 	cfdiDir := filepath.Join(s.rfcDir, "cfdis")
-	files, err := ioutil.ReadDir(cfdiDir)
+	files, err := os.ReadDir(cfdiDir)
 	if err != nil {
 		return fmt.Errorf("no se pudo leer el directorio de cfdis: %w", err)
 	}
@@ -695,7 +712,7 @@ reten_imp3_monto DECIMAL(18,2) //*[local-name()='ImpRetenidos'][3]/@montoRet | /
 	}
 
 	// Guardar el hash del archivo de campos actual para futuras comparaciones
-	if err := ioutil.WriteFile(hashFile, []byte(currentHashStr), 0644); err != nil {
+	if err := os.WriteFile(hashFile, []byte(currentHashStr), 0644); err != nil {
 		return fmt.Errorf("no se pudo guardar el hash del archivo de campos: %w", err)
 	}
 
@@ -745,7 +762,7 @@ func createTable(db *sql.DB, tableName string, campos []Campo) error {
 }
 
 func (s *SatService) processXMLFile(db *sql.DB, xmlPath string, cfdiCampos, retenCampos []Campo) error {
-	xmlBytes, err := ioutil.ReadFile(xmlPath)
+	xmlBytes, err := os.ReadFile(xmlPath)
 	if err != nil {
 		return err
 	}

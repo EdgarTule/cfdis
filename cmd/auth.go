@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -36,7 +35,7 @@ var authCmd = &cobra.Command{
 		}
 
 		var config map[string]string
-		configBytes, err := ioutil.ReadFile(configPath)
+		configBytes, err := os.ReadFile(configPath)
 		if err != nil {
 			fmt.Printf("Error al leer el archivo de configuración: %v\n", err)
 			return
